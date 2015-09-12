@@ -47,9 +47,14 @@ var minimist = require("minimist");
 var os = require("os");
 var open = require("gulp-open");
 var gutil = require('gulp-util');
-require('require-dir')('./gulp'); 
+var express = require("express");
+require('require-dir')('./gulp');
 
-var isDebug = false;
+var expressServer = express(); 
+
+var isDebug = false,
+    openInBrowser = false;
+
 var cliOptions = {
     string: [
         "files",
@@ -66,6 +71,7 @@ var cliOptions = {
 var cliArguments = minimist(process.argv.slice(2), cliOptions);
 
 isDebug = Boolean(cliArguments.debug);
+openInBrowser = Boolean(cliArguments.openInBrowser);
 
 function getOptionFromCli(cliArg) {
     if (cliArg && cliArg.length > 0) {
@@ -367,6 +373,87 @@ gulp.task('build_debug', function (callback) {
 
 gulp.task('default', ['build_debug']);
 
+/* ------------------------ BUILD PACKAGES ------------------------------- */
+
+gulp.task("build:package", function (callback) {
+    runSequence(
+	    "build:package_minified",
+		"copy:package_js_minified",
+		"copy:package_css_minified",
+		"build:package_unminified",
+		"copy:package_js_unminified",
+		"copy:package_css_unminified",
+		"combine:package_d_ts",
+		"copy:package_sprite",
+		callback);
+});
+
+gulp.task('copy:package_js_minified', function (callback) {
+    return copyPackageFile("build/scripts/powerbi-visuals.all.js", "powerbi-visuals.min.js");
+});
+
+gulp.task('copy:package_js_unminified', function (callback) {
+    return copyPackageFile("build/scripts/powerbi-visuals.all.js", "powerbi-visuals.js");
+});
+
+gulp.task('copy:package_css_minified', function (callback) {
+    return copyPackageFile("build/styles/visuals.css", "visuals.min.css");
+});
+
+gulp.task('copy:package_css_unminified', function (callback) {
+    return copyPackageFile("build/styles/visuals.css", "visuals.css");
+});
+
+gulp.task('copy:package_sprite', function (callback) {
+    return copyPackageFile("src/Clients/Visuals/images/visuals.sprites.png", "images/visuals.sprites.png");
+});
+
+gulp.task('build:package_minified', function (callback) {
+    isDebug = false;
+    runSequence(
+        "build:package_projects",
+        callback);
+});
+
+gulp.task('build:package_unminified', function (callback) {
+    isDebug = true;
+    runSequence(
+        "build:package_projects",
+        callback);
+});
+
+gulp.task("build:package_projects", function (callback) {
+    runSequence(
+        "install:jquery-ui",
+        "build:visuals_common",
+        "build:visuals_data",
+        "build:visuals",
+        "combine:internal_js",
+        "combine:external_js",
+		"combine:all",
+        callback);
+});
+
+gulp.task("combine:package_d_ts", function () {
+    return gulp.src([	    
+		"src/Clients/Typedefs/jquery/jquery.d.ts",
+		"src/Clients/Typedefs/d3/d3.d.ts",
+        "src/Clients/VisualsCommon/obj/VisualsCommon.d.ts",
+        "src/Clients/VisualsData/obj/VisualsData.d.ts",
+		"src/Clients/Visuals/obj/Visuals.d.ts"
+    ])
+        .pipe(concat("powerbi-visuals.d.ts"))
+        .pipe(gulp.dest("lib"));
+});
+
+function copyPackageFile(inputFile, outputFile) {
+	var src = [];
+    src.push(inputFile);
+	
+	return gulp.src(src)
+        .pipe(rename(outputFile))
+        .pipe(gulp.dest("lib"))
+}
 /* --------------------------- WATCHERS ---------------------------------- */
 var lintErrors = false;
 const lintReporter = function (output, file, options) {
@@ -568,7 +655,16 @@ gulp.task("copy:internal_dependencies_visuals_tests", function () {
 
 gulp.task("copy:external_dependencies_visuals_tests", function () {
     return gulp.src([
-        "build/scripts/powerbi-visuals.all.js"
+        "build/scripts/powerbi-visuals.all.js",
+        "src/Clients/externals/ThirdPartyIP/JasmineJQuery/jasmine-jquery.js",
+        "src/Clients/externals/ThirdPartyIP/MomentJS/moment.min.js",
+        "src/Clients/externals/ThirdPartyIP/Velocity/velocity.min.js",
+        "src/Clients/externals/ThirdPartyIP/Velocity/velocity.ui.min.js",
+        "src/Clients/externals/ThirdPartyIP/QuillJS/quill.min.js",
+        "node_modules/jasmine-core/lib/jasmine-core/jasmine.js",
+        "node_modules/jasmine-core/lib/jasmine-core/jasmine-html.js",
+        "node_modules/jasmine-core/lib/jasmine-core/boot.js",
+        "node_modules/jasmine-core/lib/jasmine-core/jasmine.css"
     ])
         .pipe(gulp.dest("VisualsTests"));
 });
@@ -614,42 +710,46 @@ function createHtmlTestRunner(fileName, scripts, styles, testName) {
     fs.writeFileSync(fileName, html);
 }
 
-gulp.task("run:tests", function () {
+gulp.task("run:test", function (callback) {
+    var testFolder = "VisualsTests",
+        specRunnerFileName = "runner.html";
+
     var src = [
         "powerbi-visuals.all.js",
-        "../src/Clients/externals/ThirdPartyIP/JasmineJQuery/jasmine-jquery.js",
-        "../src/Clients/externals/ThirdPartyIP/MomentJS/moment.min.js",
-        "../src/Clients/externals/ThirdPartyIP/Velocity/velocity.min.js",
-        "../src/Clients/externals/ThirdPartyIP/Velocity/velocity.ui.min.js",
-        "../src/Clients/externals/ThirdPartyIP/QuillJS/quill.min.js",
+        "jasmine-jquery.js",
+        "moment.min.js",
+        "velocity.min.js",
+        "velocity.ui.min.js",
+        "quill.min.js",
         "powerbi-visuals-tests.js"
     ];
 
     var scripts = [
-        "../node_modules/jasmine-core/lib/jasmine-core/jasmine.js",
-        "../node_modules/jasmine-core/lib/jasmine-core/jasmine-html.js",
-        "../node_modules/jasmine-core/lib/jasmine-core/boot.js"
+        "jasmine.js",
+        "jasmine-html.js",
+        "boot.js"
     ];
 
     var links = [
-        "../node_modules/jasmine-core/lib/jasmine-core/jasmine.css"
+        "jasmine.css"
     ];
 
-    var specRunnerFileName = "VisualsTests/runner.html";
-
-    var openInBrowser = cliArguments.openInBrowser;
+    var specRunnerPath = testFolder + "/" + specRunnerFileName;
 
     createHtmlTestRunner(
-        specRunnerFileName,
+        specRunnerPath,
         scripts.concat(src),
         links,
         getOptionFromCli(openInBrowser)[0]);
 
     if (openInBrowser) {
-        return gulp.src(specRunnerFileName)
-            .pipe(open());
+        runHttpServer({
+            path: testFolder,
+            port: 3001,
+            index: specRunnerFileName
+        }, callback);
     } else {
-        return gulp.src(src, {cwd: "VisualsTests"})
+        return gulp.src(src, {cwd: testFolder})
             .pipe(jasmineBrowser.specRunner({console: true}))
             .pipe(jasmineBrowser.headless());
     }
@@ -668,7 +768,59 @@ gulp.task("test", function (callback) {
         "install:phantomjs",
         "combine:all",
         "copy:dependencies_visuals_tests",
-        "run:tests",
+        "run:test",
         callback);
 });
 
+gulp.task("open:test", function (callback) {
+    openInBrowser = true;
+    
+    runSequence("test", callback);
+});
+
+function runHttpServer(settings, callback) {
+    var server = null,
+        path = settings.path,
+        port = settings.port || 3000,
+        host = settings.host || "localhost",
+        index = settings.index || "index.html";
+    
+    expressServer.use(express.static(
+        path, {
+            index: index
+        }));
+
+    server = expressServer.listen(port, host, function () {
+        var uri =
+            "http://" +
+            server.address().address +
+            ":" +
+            server.address().port;
+        
+        console.log("Server started on %s", uri);
+        
+        gulp.src(path).pipe(open({
+            uri: uri
+        }));
+    });
+    
+    process.on("SIGINT", function () {
+        if (server && server.close) {
+            server.close();
+        }
+        
+        callback();
+        
+        process.exit();
+    });
+}
+
+gulp.task("run:playground", function (callback) {
+    runHttpServer({
+        path: "src/Clients/PowerBIVisualsPlayground"
+    }, callback);
+});
+
+gulp.task("build:run:playground", function (callback) {
+    runSequence("build", "run:playground", callback);
+});
