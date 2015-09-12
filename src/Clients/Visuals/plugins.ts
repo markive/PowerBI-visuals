@@ -276,6 +276,8 @@ module powerbi.visuals.plugins {
         create: () => new CheerMeter()
     };
 
+    //Samples
+
     export var consoleWriter: IVisualPlugin = {
         name: 'consoleWriter',
         capabilities: samples.consoleWriterCapabilities,
@@ -293,4 +295,13 @@ module powerbi.visuals.plugins {
         capabilities: samples.AsterPlot.capabilities,
         create: () => new samples.AsterPlot()
     };
+
+    //SQLBI Visuals
+    
+    export var bulletChartBySQLBI: IVisualPlugin = {
+        name: 'bulletChartBySQLBI',
+        capabilities: bulletChartBySQLBICapabilities,
+        create: () => new BulletChartBySQLBI()
+    };
+
 }
