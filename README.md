@@ -5,14 +5,16 @@ The Microsoft Power BI visuals project provides high quality data visualizations
 ## What is included
 
 1. Source code of all the visuals used in Power BI.
-2. Source code of *Bullet Chart by SQLBI*
+2. Source code of **Bullet Chart by SQLBI**
 3. A Playground app to help you try out the existing visuals, and experiment with the ones you have created.
 
-## Vote our custom visuals
+## Power BI Best Visuals Contest
 
-Please vote our custom visuals for [The Power BI Best Visuals Contest](http://community.powerbi.com/t5/Best-Visual-Contest/con-p/best_visual_contest/tab/entries) with a retweet:
+Please vote our custom visuals for the [Power BI Best Visuals Contest](http://community.powerbi.com/t5/Best-Visual-Contest/con-p/best_visual_contest/tab/entries) with a retweet:
 
 - For [Bullet Chart by SQLBI](https://twitter.com/marcorus/status/642791757198041088)
+
+![alt tag](bulletchart-screenshot.png)
 
 ## Getting Started
 
