@@ -10,7 +10,7 @@ The Microsoft Power BI visuals project provides high quality data visualizations
 
 ## Power BI Best Visuals Contest
 
-Please vote our custom visuals for the [Power BI Best Visuals Contest](http://community.powerbi.com/t5/Best-Visual-Contest/con-p/best_visual_contest/tab/entries) with a retweet:
+Please vote our custom visuals for the [Power BI Best Visuals Contest](http://community.powerbi.com/t5/Best-Visual-Contest/con-p/best_visual_contest/tab/entries):
 
 - Retweet [Bullet Chart by SQLBI](https://twitter.com/marcorus/status/642791757198041088)
 
