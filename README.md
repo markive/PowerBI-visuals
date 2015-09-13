@@ -4,9 +4,9 @@ The Microsoft Power BI visuals project provides high quality data visualizations
 
 ## What is included
 
-1. Source code of all the visuals used in Power BI.
+1. Source code of all the visuals used in Power BI
 2. Source code of **Bullet Chart by SQLBI**
-3. A Playground app to help you try out the existing visuals, and experiment with the ones you have created.
+3. A Playground app to help you try out the existing visuals, and experiment with the ones you have created
 
 ## Power BI Best Visuals Contest
 
