@@ -12,7 +12,7 @@ The Microsoft Power BI visuals project provides high quality data visualizations
 
 Please vote our custom visuals for the [Power BI Best Visuals Contest](http://community.powerbi.com/t5/Best-Visual-Contest/con-p/best_visual_contest/tab/entries) with a retweet:
 
-- For [Bullet Chart by SQLBI](https://twitter.com/marcorus/status/642791757198041088)
+- Retweet [Bullet Chart by SQLBI](https://twitter.com/marcorus/status/642791757198041088)
 
 ![alt tag](bulletchart-screenshot.png)
 
