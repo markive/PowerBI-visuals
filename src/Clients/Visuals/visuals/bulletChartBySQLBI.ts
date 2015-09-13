@@ -43,7 +43,7 @@ module powerbi.visuals {
         target: number;
         min: number;
         max: number;
-        orientation: number; //0=horizontal, 1=vertical
+        orientation: number; //0=horizontal, 1=vertical 
         selector: data.Selector;
         toolTipInfo: TooltipDataItem[];
     }

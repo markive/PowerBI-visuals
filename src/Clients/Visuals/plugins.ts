@@ -295,6 +295,14 @@ module powerbi.visuals.plugins {
         capabilities: samples.AsterPlot.capabilities,
         create: () => new samples.AsterPlot()
     };
+    /*
+    export var owlGauge: IVisualPlugin = {
+        name: 'owlGauge',
+        watermarkKey: 'gauge',
+        capabilities: OwlGauge.capabilities,
+        create: () => new OwlGauge()
+    };
+    */
 
     //SQLBI Visuals
     
