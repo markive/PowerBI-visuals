@@ -2,11 +2,10 @@
 
 The Microsoft Power BI visuals project provides high quality data visualizations that you can use to extend [Power BI](https://powerbi.microsoft.com/).  The project contains over 20 visualization types plus SQLBI custom visuals, the framework to run them, and the testing infrastructure that enables you to build high quality visualizations.  The framework provides all the interfaces you need to integrate fully with Power BI's selection, filtering, and other UI experiences.  The code is written in [TypeScript](http://www.typescriptlang.org/) so it's easier to build and debug. Everything compiles down to JavaScript and runs in modern web browsers.  The visuals are built using [D3](http://d3js.org/). This gives you everything you need to build custom visualizations for Power BI.
 
-## What is included
+## Updated: Sep. 15, 2015
 
-1. Source code of all the visuals used in Power BI
-2. Source code of **Bullet Chart by SQLBI**
-3. A Playground app to help you try out the existing visuals, and experiment with the ones you have created
+The Bullet Chart by SQLBI now allow you to define a comparison  measure (i.e. previous year of the actual measure) and  an additional label for measure description. The legend will coming soon.
+
 
 ## Power BI Best Visuals Contest
 
@@ -15,6 +14,13 @@ Please vote our custom visuals for the [Power BI Best Visuals Contest](http://co
 - Retweet [Bullet Chart by SQLBI](https://twitter.com/marcorus/status/642791757198041088)
 
 ![alt tag](bulletchart-screenshot.png)
+
+
+## What is included
+
+1. Source code of all the visuals used in Power BI
+2. Source code of **Bullet Chart by SQLBI**
+3. A Playground app to help you try out the existing visuals, and experiment with the ones you have created
 
 ## Getting Started
 

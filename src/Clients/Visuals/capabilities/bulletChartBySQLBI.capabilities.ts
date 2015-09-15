@@ -1,6 +1,6 @@
 ﻿/*
- *  Bullet Chart by SQLBI - Capabilities
- *
+ *  Bullet Chart by SQLBI - Capabilities 
+ *  
  *  Based on Stephen Few design
  *  Based on Clint Ivy, Jamie Love, and Jason Davies HTML implementation
  *  Based on Mike Bostock D3 implementation
@@ -40,6 +40,14 @@ module powerbi.visuals {
                 kind: VisualDataRoleKind.Measure,
                 displayName: data.createDisplayNameGetter('Role_DisplayName_Value'),
             }, {
+                name: 'ComparisonValue',
+                kind: VisualDataRoleKind.Measure,
+                displayName: 'Comparison Value',
+            }, {
+                name: 'TargetValue',
+                kind: VisualDataRoleKind.Measure,
+                displayName: data.createDisplayNameGetter('Role_DisplayName_TargetValue'),
+            }, {
                 name: 'MinValue',
                 kind: VisualDataRoleKind.Measure,
                 displayName: data.createDisplayNameGetter('Role_DisplayName_MinValue'),
@@ -47,10 +55,7 @@ module powerbi.visuals {
                 name: 'MaxValue',
                 kind: VisualDataRoleKind.Measure,
                 displayName: data.createDisplayNameGetter('Role_DisplayName_MaxValue'),
-            }, {
-                name: 'TargetValue',
-                kind: VisualDataRoleKind.Measure,
-                displayName: data.createDisplayNameGetter('Role_DisplayName_TargetValue'),
+            
             }, {
                 name: 'QualitativeState1Value',
                 kind: VisualDataRoleKind.Measure,
@@ -72,13 +77,15 @@ module powerbi.visuals {
                 properties: {
                     fill: {
                         type: { fill: { solid: { color: true } } },
-                        displayName: 'Fill'
+                        displayName: 'Main Color'
                     },
-                    formatString: {
-                        type: { formatting: { formatString: true } },
+                    fill2: {
+                        type: { fill: { solid: { color: true } } },
+                        displayName: 'Comparison Color'
                     },
                 },
             },
+
             label: {
                 displayName: "Label",
                 properties: {
@@ -90,20 +97,46 @@ module powerbi.visuals {
                         type: { text: true },
                         displayName: 'Text'
                     },
+                    text2: {
+                        type: { text: true },
+                        displayName: 'Description'
+                    },
                 },
-            }
+            },
+            /*legend: {
+                displayName: data.createDisplayNameGetter('Visual_Legend'),
+                properties: {
+                    show: {
+                        displayName: data.createDisplayNameGetter('Visual_Show'),
+                        type: { bool: true }
+                    },
+                    position: {
+                        displayName: data.createDisplayNameGetter('Visual_LegendPosition'),
+                        type: { formatting: { legendPosition: true } }
+                    },
+                    showTitle: {
+                        displayName: data.createDisplayNameGetter('Visual_LegendShowTitle'),
+                        type: { bool: true }
+                    },
+                    titleText: {
+                        displayName: data.createDisplayNameGetter('Visual_LegendTitleText'),
+                        type: { text: true }
+                    }
+                }
+            },*/
         },
         dataViewMappings: [{
             conditions: [
-                { 'Y': { max: 1 }, 'MinValue': { max: 1 }, 'MaxValue': { max: 1 }, 'TargetValue': { max: 1 }, 'QualitativeState1Value': { max: 1 }, 'QualitativeState2Value': { max: 1 }, 'QualitativeState3Value': { max: 1 } },
+                { 'Y': { max: 1 }, 'ComparisonValue': { max: 1 }, 'TargetValue': { max: 1 }, 'MinValue': { max: 1 }, 'MaxValue': { max: 1 }, 'QualitativeState1Value': { max: 1 }, 'QualitativeState2Value': { max: 1 }, 'QualitativeState3Value': { max: 1 } },
             ],
             categorical: {
                 values: {
                     select: [
                         { bind: { to: 'Y' } },
+                        { bind: { to: 'ComparisonValue' } },
+                        { bind: { to: 'TargetValue' } },
                         { bind: { to: 'MinValue' } },
                         { bind: { to: 'MaxValue' } },
-                        { bind: { to: 'TargetValue' } },
                         { bind: { to: 'QualitativeState1Value' } },
                         { bind: { to: 'QualitativeState2Value' } },
                         { bind: { to: 'QualitativeState3Value' } },
