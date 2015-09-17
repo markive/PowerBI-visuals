@@ -99,7 +99,7 @@ module powerbi.visuals {
                     },
                     text2: {
                         type: { text: true },
-                        displayName: 'Description'
+                        displayName: 'Category'
                     },
                 },
             },
@@ -144,5 +144,6 @@ module powerbi.visuals {
                 },
             },
         }],
+        suppressDefaultTitle: true,
     };
 } 

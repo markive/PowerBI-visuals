@@ -1,26 +1,35 @@
-# Microsoft Power BI visuals plus Bullet Chart by SQLBI
+# Microsoft Power BI visuals plus custom visuals by SQLBI
 
 The Microsoft Power BI visuals project provides high quality data visualizations that you can use to extend [Power BI](https://powerbi.microsoft.com/).  The project contains over 20 visualization types plus SQLBI custom visuals, the framework to run them, and the testing infrastructure that enables you to build high quality visualizations.  The framework provides all the interfaces you need to integrate fully with Power BI's selection, filtering, and other UI experiences.  The code is written in [TypeScript](http://www.typescriptlang.org/) so it's easier to build and debug. Everything compiles down to JavaScript and runs in modern web browsers.  The visuals are built using [D3](http://d3js.org/). This gives you everything you need to build custom visualizations for Power BI.
 
-## Updated: Sep. 15, 2015
+## Updated: Sep 17, 2015
 
-The Bullet Chart by SQLBI now allow you to define a comparison  measure (i.e. previous year of the actual measure) and  an additional label for measure description. The legend will coming soon.
+Added Card with States by SQLBI custom visual.
+
+## Updated: Sep 15, 2015
+
+The Bullet Chart by SQLBI now allow you to define a comparison  measure (i.e. previous year of the actual measure) and  an additional label for measure description.
 
 
 ## Power BI Best Visuals Contest
 
 Please vote our custom visuals for the [Power BI Best Visuals Contest](http://community.powerbi.com/t5/Best-Visual-Contest/con-p/best_visual_contest/tab/entries):
 
-- Retweet [Bullet Chart by SQLBI](https://twitter.com/marcorus/status/642791757198041088)
+- **Bullet Chart by SQLBI** - [Retweet to vote](https://twitter.com/marcorus/status/642791757198041088)
 
 ![alt tag](bulletchart-screenshot.png)
+
+- **Card with States by SQLBI** <!--[Retweet to vote](https://twitter.com/danieleperilli)-->
+
+![alt tag](cardwithstates-screenshot.png)
 
 
 ## What is included
 
 1. Source code of all the visuals used in Power BI
 2. Source code of **Bullet Chart by SQLBI**
-3. A Playground app to help you try out the existing visuals, and experiment with the ones you have created
+3. Source code of **Card with States by SQLBI**
+4. A Playground app to help you try out the existing visuals, and experiment with the ones you have created
 
 ## Getting Started
 
@@ -40,7 +49,7 @@ In order to build the Power BI visuals, ensure that you have [Git](http://git-sc
 Clone a copy of the repo:
 
 ```
-git clone https://github.com/Microsoft/PowerBI-visuals.git
+git clone https://github.com/danieleperilli/PowerBI-visuals.git
 ```
 
 Change to the PowerBI-visuals directory:

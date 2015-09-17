@@ -312,4 +312,10 @@ module powerbi.visuals.plugins {
         create: () => new BulletChartBySQLBI()
     };
 
+    export var cardWithStatesBySQLBI: IVisualPlugin = {
+        name: 'cardWithStatesBySQLBI',
+        capabilities: cardWithStatesBySQLBICapabilities,
+        create: () => new CardWithStatesBySQLBI()
+    };
+
 }
