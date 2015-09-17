@@ -4,25 +4,26 @@ The Microsoft Power BI visuals project provides high quality data visualizations
 
 ## Updated: Sep 17, 2015
 
-Added Card with States by SQLBI custom visual.
+- Bullet Chart by SQLBI won the 1st People Choice Award
+- Added Card with States by SQLBI custom visual
 
 ## Updated: Sep 15, 2015
 
-The Bullet Chart by SQLBI now allow you to define a comparison  measure (i.e. previous year of the actual measure) and  an additional label for measure description.
+- The Bullet Chart by SQLBI now allow you to define a comparison  measure (i.e. previous year of the actual measure) and  an additional label for measure description
 
 
 ## Power BI Best Visuals Contest
 
 Please vote our custom visuals for the [Power BI Best Visuals Contest](http://community.powerbi.com/t5/Best-Visual-Contest/con-p/best_visual_contest/tab/entries):
 
-**Bullet Chart by SQLBI** - [Retweet to vote](https://twitter.com/marcorus/status/642791757198041088)
+- **Bullet Chart by SQLBI** - 1st winner of the People Choice Award - [Retweet to vote](https://twitter.com/DanielePerilli/status/642791357107564544)
 
 Inspired by Stephen Few, here is the Power BI implementation of this beautiful space-saving indicator. It allows you to bind a main measure, a target, and a comparison measure.
 
 ![alt tag](bulletchart-screenshot.png)
 
 
-**Card with States by SQLBI** - [Retweet to vote](https://twitter.com/DanielePerilli/status/644449949388808192)
+- **Card with States by SQLBI** - [Retweet to vote](https://twitter.com/DanielePerilli/status/644449949388808192)
 
 Based on the Power BI builtin Card, this visual allows you to bind a performance value and define up to 3 states that determine the color of the main label. 
 Plus: the Category Label is now fully customizable.
