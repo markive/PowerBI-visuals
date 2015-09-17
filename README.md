@@ -17,9 +17,14 @@ Please vote our custom visuals for the [Power BI Best Visuals Contest](http://co
 
 - **Bullet Chart by SQLBI** - [Retweet to vote](https://twitter.com/marcorus/status/642791757198041088)
 
+Inspired by Stephen Few, here is the Power BI implementation of this beautiful space-saving single value visual. It allows you to bind the main measure, a target, and a comparison measure.
+
 ![alt tag](bulletchart-screenshot.png)
 
-- **Card with States by SQLBI** <!--[Retweet to vote](https://twitter.com/danieleperilli)-->
+
+- **Card with States by SQLBI**
+
+Based on the Power BI builtin Card, this visual allows you to bind a performance value and define up to 3 states that determine the color of the main label. Plus: the Category Label is now fully customizable.
 
 ![alt tag](cardwithstates-screenshot.png)
 
