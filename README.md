@@ -2,7 +2,7 @@
 
 The Microsoft Power BI visuals project provides high quality data visualizations that you can use to extend [Power BI](https://powerbi.microsoft.com/).  The project contains over 20 visualization types plus SQLBI custom visuals, the framework to run them, and the testing infrastructure that enables you to build high quality visualizations.  The framework provides all the interfaces you need to integrate fully with Power BI's selection, filtering, and other UI experiences.  The code is written in [TypeScript](http://www.typescriptlang.org/) so it's easier to build and debug. Everything compiles down to JavaScript and runs in modern web browsers.  The visuals are built using [D3](http://d3js.org/). This gives you everything you need to build custom visualizations for Power BI.
 
-## Updated: Sep 17, 2015
+## Updated: Sep 17, 2015 
 
 - Bullet Chart by SQLBI won the 1st People Choice Award
 - Added Card with States by SQLBI custom visual
