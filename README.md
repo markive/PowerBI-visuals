@@ -7,7 +7,7 @@ The Microsoft Power BI visuals project provides high quality data visualizations
 
 Please vote our custom visuals for the [Power BI Best Visuals Contest](http://community.powerbi.com/t5/Best-Visual-Contest/con-p/best_visual_contest/tab/entries):
 
-- **Synoptic Panel by SQLBI**
+- **Synoptic Panel by SQLBI** 
 
 The Synoptic Panel connects areas in a picture with attributes in the data model, coloring each area with a state (red/yellow/green) or with a saturation of a color related to the value of a measure. Starting from any image, you draw custom areas using http://synoptic.design, which generates a JSON file you import in the Synoptic Panel. You can visualize data over a map, a planimetry, a diagram, a flow chart.
 
