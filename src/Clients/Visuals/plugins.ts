@@ -52,7 +52,7 @@ module powerbi.visuals.plugins {
         customizeQuery: ColumnChart.customizeQuery,
         getSortableRoles: (visualSortableOptions?: VisualSortableOptions) => ColumnChart.getSortableRoles(visualSortableOptions),
     };
-    
+
     export var basicShape: IVisualPlugin = {
         name: 'basicShape',
         capabilities: basicShapeCapabilities,
@@ -232,6 +232,13 @@ module powerbi.visuals.plugins {
         create: () => new CartesianChart({ chartType: CartesianChartType.Scatter })
     };
 
+    export var playChart: IVisualPlugin = {
+        name: 'playChart',
+        watermarkKey: 'play',
+        capabilities: capabilities.playChart,
+        create: () => new CartesianChart({ chartType: CartesianChartType.Play })
+    };
+
     export var table: IVisualPlugin = {
         name: 'table',
         watermarkKey: 'table',
@@ -276,8 +283,6 @@ module powerbi.visuals.plugins {
         create: () => new CheerMeter()
     };
 
-    //Samples
-
     export var consoleWriter: IVisualPlugin = {
         name: 'consoleWriter',
         capabilities: samples.consoleWriterCapabilities,
@@ -295,14 +300,20 @@ module powerbi.visuals.plugins {
         capabilities: samples.AsterPlot.capabilities,
         create: () => new samples.AsterPlot()
     };
-    /*
+
     export var owlGauge: IVisualPlugin = {
         name: 'owlGauge',
         watermarkKey: 'gauge',
         capabilities: OwlGauge.capabilities,
         create: () => new OwlGauge()
     };
-    */
+    
+    export var streamGraph: IVisualPlugin = {
+        name: 'streamGraph',
+        watermarkKey: 'lineChart',
+        capabilities: samples.StreamGraph.capabilities,
+        create: () => new samples.StreamGraph()
+    };
 
     //SQLBI Visuals
     
@@ -318,4 +329,9 @@ module powerbi.visuals.plugins {
         create: () => new CardWithStatesBySQLBI()
     };
 
+    export var synopticPanelBySQLBI: IVisualPlugin = {
+        name: 'synopticPanelBySQLBI',
+        capabilities: synopticPanelBySQLBICapabilities,
+        create: () => new SynopticPanelBySQLBI()
+    };
 }

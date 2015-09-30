@@ -61,7 +61,6 @@ module powerbi.visuals {
         private svgSubtitle: D3.Selection;
 
         private dataView: DataView;
-        private selectionManager: SelectionManager;
         //private legend: ILegend;
 
         //Capabilities - moved to BulletChartBySQLBI.capabilities.ts
@@ -90,8 +89,6 @@ module powerbi.visuals {
                 .append('text')
                 .attr('dy', '1em')
                 .classed('subtitle', true);
-
-            this.selectionManager = new SelectionManager({ hostServices: options.host });
 
             //this.legend = createLegend(options.element, false, null);
         }

@@ -386,8 +386,8 @@ module powerbi.visuals {
                             color: formatSettings.titleSettings.color
                         },
                     }];
-                case 'labels':
-                    return dataLabelUtils.enumerateDataLabels(formatSettings.labelSettings, /*withPosition:*/ false, /*withPrecision:*/ true, /*withDisplayUnit:*/ true);
+                //case 'labels':
+                //    return dataLabelUtils.enumerateDataLabels(formatSettings.labelSettings, /*withPosition:*/ false, /*withPrecision:*/ true, /*withDisplayUnit:*/ true);
                 case 'dataState1':
                     return [{
                         objectName: 'dataState1',

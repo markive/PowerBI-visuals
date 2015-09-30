@@ -42,18 +42,18 @@ module powerbi.visuals {
         visitLineChart(options: LineChartBehaviorOptions);
     }
 
-    export interface SelectableDataPoint {
+    /*export interface SelectableDataPoint {
         selected: boolean;
         identity: SelectionId;
-    }
+    }*/
 
     export module VisualInteractivityFactory {
         export function buildInteractivityService(options: VisualInitOptions): IInteractivityService {
             if (options.interactivity && options.interactivity.selection) {
                 return createInteractivityService(options.host);
-            } else if (options.interactivity && options.interactivity.isInteractiveLegend) {
+            } /*else if (options.interactivity && options.interactivity.isInteractiveLegend) {
                 return new MobileInteractivityService();
-            }
+            }*/
             // For hosts that don't have interactivity like the dashboard
             return null;
         }
