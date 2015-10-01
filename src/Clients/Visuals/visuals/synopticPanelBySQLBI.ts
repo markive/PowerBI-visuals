@@ -62,8 +62,8 @@ module powerbi.visuals {
         dataState2?: SynopticPanelBySQLBIState;
         dataState3?: SynopticPanelBySQLBIState;
         saturationState?: SynopticPanelBySQLBIState;
-        initialImageData?: any;
-        initialAreasData?: any;
+        imageData?: any;
+        areasData?: any;
         showAllAreas?: boolean;
     }
 
@@ -182,6 +182,7 @@ module powerbi.visuals {
         private imageData: any;
         private areasData: any;
         private parsedAreas: any;
+        private inEditingMode: boolean;
 
         //Capabilities - moved to SynopticPanelBySQLBI.capabilities.ts - left here only for online Developer Tool
         public static capabilities: VisualCapabilities = {
@@ -402,7 +403,7 @@ module powerbi.visuals {
             this.colors = this.style.colorPalette.dataColors;
             this.interactivity = options.interactivity;
             this.isInteractive = options.interactivity && options.interactivity.isInteractiveLegend;
-
+            this.inEditingMode = false; //(this.host.getViewMode() === ViewMode.Edit);
             this.interactivityService = createInteractivityService(this.host);
             this.legend = createLegend(this.element, this.isInteractive, this.interactivityService, true);
 
@@ -421,7 +422,7 @@ module powerbi.visuals {
 
             this.svgAreas = this.svg.append('g');
 
-            this.loader = $('<div class="synopticLoader"><span><input type="file" class="file image" accept="image/*"><button class="fileChoose"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAVCAYAAABYHP4bAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAVFJREFUeNq8VdGNhCAQ5Yz/ZwmWYKIFWMKW4HWwJViCJXAVnCVQgMltCZRgCTfPPBKOA9xN5CaZNbAM780bGN76vm+VUvCSZmv5mei2EAiS0DUHetu2uQTKMAzHvpX6J6sTLEbKeUO24otkbCPrIEsj/z3OgKpIcCOfVRzBAMR4ScSDhJGY7mUgZmGE5UKmdwCSvU/ozkLPz4ClatQE43fxPZAMABMIkUwW7A+QBEKOVoI0WUPGT5nfA8lwUo0Xk5UxlVHn1QgbTgnJfIKO1Mo6nwOBPSU5WCYk2yNxE9ebEKzKXDQcii9k5snxS7IEyYlq6FMgMsfCDxb6W+bWmGQZsOb0wlJrzSID2HLuFpPsGYtdWO0V1zGEVG1OspdakIC4ttPFDsiVvW6ht2EnuLqpurszXrD3Iwkk8oyqkDmglk9DqRf2eMotpZpVOTM/AgwAeC+UFtc7FSAAAAAASUVORK5CYII="> Select Map</button></span><span><input type="file" class="file json" accept=".txt,.json"><button class="fileChoose"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAN1JREFUeNrUlM0NwjAMhd0q94YNMgJSc6cjwAYZIRvACIwAGzBCB8iBEWCDMkHwQw4K17gXLL1WjpRPjv+6nDN5709EFFkDtdsTDCMOYFNK6d5K46DACL34gwYmhvu2kyc/2DnLYasFfEzlIOS9Aoig4ifCNW11oJEKuZIDhS2sS8nhzLrJYash/47w5HEcM/4aMWNizX3VmFb5ZFu3zRVlZ6imD3esw7fKUhinmRSetuV/+hDr66hkvdDLpSiAbZADxfoK9foiDaxaDj/rSzspW9wvEU5KWBnf+BZgAJE6gni3MavDAAAAAElFTkSuQmCC">Select Areas</button></span></div>').appendTo(this.element);
+            this.loader = $('<div class="synopticLoader"><span><input type="file" class="file image" accept="image/*"><button class="fileChoose"><svg width="20" height="16"><g><path fill="#595959" d="M20,16.1H0V-0.1h20V16.1z M1,15.1h18V0.9H1V15.1z M16.3,12.8H3.7v-1.7l3-3.9l1.7,1.4l3.4-5.1l4.4,4.6V12.8z M4.7,11.8h10.6V8.6L12,5.2l-3.3,5L6.9,8.7l-2.2,2.8V11.8z M5.7,7.1c-0.6,0-1-0.2-1.4-0.6C3.9,6.1,3.7,5.6,3.7,5.1 c0-0.5,0.2-1,0.6-1.4c0.7-0.7,2-0.8,2.8,0c0.4,0.4,0.6,0.8,0.6,1.4c0,0.5-0.2,1-0.6,1.4C6.7,6.9,6.2,7.1,5.7,7.1z M5.7,4.1 C5.4,4.1,5.2,4.2,5,4.4C4.8,4.6,4.7,4.8,4.7,5.1c0,0.3,0.1,0.5,0.3,0.7c0.4,0.4,1,0.4,1.4,0c0.2-0.2,0.3-0.4,0.3-0.7 c0-0.3-0.1-0.5-0.3-0.7C6.2,4.2,5.9,4.1,5.7,4.1z"/></g></svg> Select Map</button></span><span><input type="file" class="file json" accept=".txt,.json"><button class="fileChoose"><svg width="22" height="16"><path Fill="#595959" d="M22,4.6L12.9,0L0,6.5l4.8,2.4L0,11.4L9.1,16L22,9.4L17.2,7L22,4.6z M12.9,0.9l7.2,3.7l-11,5.6 L1.9, 6.5L12.9, 0.9z"/></svg> Select Areas</button></span></div>').appendTo(this.element);
 
             var self = this;
             $('.fileChoose').on('click', function (e) {
@@ -442,9 +443,11 @@ module powerbi.visuals {
                         if (isImage) {
                             self.initialImageSize = null;
                             self.imageData = fr.result;
+                            self.persistExternalData('imageData');
                         } else {
                             self.parsedAreas = null;
                             self.areasData = fr.result;
+                            self.persistExternalData('areasData');
                         }
                         self.renderMap();
                     };
@@ -519,8 +522,8 @@ module powerbi.visuals {
                     dataState2: dataState2,
                     dataState3: dataState3,
                     saturationState: saturationState,
-                    initialImageData: imageData,
-                    initialAreasData: areasData,
+                    imageData: imageData,
+                    areasData: areasData,
                     showAllAreas: showAllAreas
                 };
 
@@ -536,9 +539,16 @@ module powerbi.visuals {
 
         }
 
+        public onViewModeChanged(viewMode: ViewMode): void {
+            this.inEditingMode = (viewMode === ViewMode.Edit);
+        }
+
         //Drawing the visual
         public update(options: VisualUpdateOptions) {
             if (!options.dataViews && !options.dataViews[0]) return;
+
+            if (options.viewMode) this.inEditingMode = (options.viewMode === 1);
+
             var dataView = this.dataView = options.dataViews[0];
             var currentViewport = this.currentViewport = options.viewport;
 
@@ -553,24 +563,18 @@ module powerbi.visuals {
                     'width': currentViewport.width
                 });
             
-            if (!this.imageData) this.imageData = this.data.initialImageData;
-            if (!this.areasData) this.areasData = this.data.initialAreasData;
+            if (!this.imageData) this.imageData = this.data.imageData;
+            if (!this.areasData) this.areasData = this.data.areasData;
 
-            if (!this.imageData || !this.areasData) {
-
-                this.loader.show();
-
-            } else {
-
+            if (this.imageData && this.areasData)
                 this.renderMap();
-            }
+
+            this.loader.toggle(this.inEditingMode);
         }
 
         private renderMap() {
             var self = this;
             if (this.imageData) {
-
-                this.data.initialImageData = this.imageData;
 
                 if (!this.initialImageSize) {
                     $('<img/>').attr('src', this.imageData).load(function () {
@@ -593,10 +597,6 @@ module powerbi.visuals {
             var selectionManager = this.selectionManager;
 
             if (this.areasData) {
-
-                this.data.initialAreasData = this.areasData;
-
-                this.loader.hide();
 
                 if (!this.parsedAreas) {
                     var json = JSON.parse(this.areasData);
@@ -798,6 +798,31 @@ module powerbi.visuals {
             }
         }
 
+        private persistExternalData(propertyName: string): void {
+
+            switch (propertyName) {
+                case 'imageData':
+                    this.host.persistProperties({
+                        objectName: 'general',
+                        selector: null,
+                        properties: {
+                            imageData: this.imageData,
+                        },
+                    });
+                    break;
+
+                case 'areasData':
+                    this.host.persistProperties({
+                        objectName: 'general',
+                        selector: null,
+                        properties: {
+                            areasData: this.areasData,
+                        },
+                    });
+                    break;
+            }
+        }
+
         //Make visual properties available in the property pane in Power BI
         public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[]{
 
@@ -809,8 +834,8 @@ module powerbi.visuals {
                             objectName: 'general',
                             selector: null,
                             properties: {
-                                imageData: this.data.initialImageData,
-                                areasData: this.data.initialAreasData,
+                                imageData: this.imageData,
+                                areasData: this.areasData,
                                 showAllAreas: this.data.showAllAreas
                             },
                         });
