@@ -2,6 +2,9 @@
  *  Synoptic Panel by SQLBI
  *  Draw custom areas over a bitmap image and get all the necessary coordinates with our free tool at http://synoptic.design
  *
+ *  Known issues: 
+ *  - Map image and Areas json file are not saved between sessions 
+ *
  *  Power BI Visualizations
  *
  *  Copyright (c) SQLBI
@@ -64,6 +67,41 @@ module powerbi.visuals {
         showAllAreas?: boolean;
     }
 
+    export interface SynopticPanelBySQLBIBehaviorOptions {
+        polygons: D3.Selection;
+        clearCatcher: D3.Selection;
+        hasHighlights: boolean;
+    }
+
+    export class SynopticPanelBySQLBIBehavior implements IInteractiveBehavior {
+
+        private polygons: D3.Selection;
+        private hasHighlights: boolean;
+
+        public bindEvents(options: SynopticPanelBySQLBIBehaviorOptions, selectionHandler: ISelectionHandler): void {
+            
+            var clearCatcher = options.clearCatcher;
+            this.hasHighlights = options.hasHighlights;
+            this.polygons = options.polygons;
+
+            var clickHandler = (d: SynopticPanelDataPoint) => {
+                selectionHandler.handleSelection(d, d3.event.ctrlKey);
+            };
+
+            this.polygons.on('click', clickHandler);
+
+            clearCatcher.on('click', () => {
+                selectionHandler.handleClearSelection();
+            });
+        }
+
+        public renderSelection(hasSelection: boolean): void {
+            var hasHighlights = this.hasHighlights;
+            this.polygons.style("opacity", (d: SynopticPanelDataPoint) => ColumnUtil.getFillOpacity(d.selected, d.highlightRatio > 0, hasSelection, hasHighlights && !d.selected));
+        }
+    }
+
+    //Properties
     export var synopticPanelProps = {
         general: {
             formatString: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'formatString' },
@@ -135,6 +173,8 @@ module powerbi.visuals {
         private currentViewport: IViewport;
         private colors: IDataColorPalette;
         private options: VisualInitOptions;
+        private behavior: SynopticPanelBySQLBIBehavior;
+        private clearCatcher: D3.Selection;
         private interactivity: InteractivityOptions;
         private interactivityService: IInteractivityService;
         private isInteractive: boolean;
@@ -357,6 +397,7 @@ module powerbi.visuals {
             this.currentViewport = options.viewport;
             this.style = options.style;
             this.host = options.host;
+            this.behavior = new SynopticPanelBySQLBIBehavior();
             this.selectionManager = new SelectionManager({ hostServices: options.host });
             this.colors = this.style.colorPalette.dataColors;
             this.interactivity = options.interactivity;
@@ -374,8 +415,9 @@ module powerbi.visuals {
 
             this.svg = d3.select(this.element.get(0))
                 .append('svg')
-                .classed(SynopticPanelBySQLBI.ClassName, true)
-                .on('click', () => this.selectionManager.clear().then(() => d3.selectAll('g.poly').style('opacity', 1)));
+                .classed(SynopticPanelBySQLBI.ClassName, true);
+
+            this.clearCatcher = appendClearCatcher(this.svg);
 
             this.svgAreas = this.svg.append('g');
 
@@ -522,7 +564,6 @@ module powerbi.visuals {
 
                 this.renderMap();
             }
-
         }
 
         private renderMap() {
@@ -634,8 +675,7 @@ module powerbi.visuals {
                             .classed('poly', true);
 
                         //Highlight
-                        if (this.data.hasHighlights || (this.interactivityService && this.interactivityService.hasSelection()))
-                            g.style('opacity', (dataPoint.selected ? 1 : 0.3));
+                        g.style('opacity', ColumnUtil.getFillOpacity(dataPoint.selected, dataPoint.highlightRatio > 0, false, this.data.hasHighlights));
 
                         g
                             .append('polygon')
@@ -691,22 +731,33 @@ module powerbi.visuals {
                     }
                         
                 }
-                
-                d3.selectAll('g.poly')
-                    .on('click', function (d) {
-               
-                        selectionManager.select(d.identity).then((ids) => {
-                            if (ids.length > 0) {
-                                d3.selectAll('g.poly').style('opacity', 0.3);
-                                d3.select(this).style('opacity', 1);
-                            } else {
-                                d3.selectAll('g.poly').style('opacity', 1);
-                            }
-                                
-                    });
 
-                        d3.event.stopPropagation();
-                    });
+                if (this.isInteractive) {
+                    d3.selectAll('g.poly')
+                        .on('click', function (d) {
+
+                            selectionManager.select(d.identity).then((ids) => {
+                                if (ids.length > 0) {
+                                    d3.selectAll('g.poly').style('opacity', 0.4);
+                                    d3.select(this).style('opacity', 1);
+                                } else {
+                                    d3.selectAll('g.poly').style('opacity', 1);
+                                }
+
+                            });
+
+                            d3.event.stopPropagation();
+                        });
+                } else if (this.interactivityService) {
+
+                    var behaviorOptions: SynopticPanelBySQLBIBehaviorOptions = {
+                        polygons: d3.selectAll('g.poly'),
+                        clearCatcher: this.clearCatcher,
+                        hasHighlights: this.data.hasHighlights,
+                    };
+
+                    this.interactivityService.bind(this.data.dataPoints, this.behavior, behaviorOptions);
+                }
 
                 this.renderLegend();
             }
@@ -993,12 +1044,15 @@ module powerbi.visuals {
                 this.legendDataPoints = [];
                 this.dataLabelsSettings = null;
 
-                var seriesData = dataViewCategorical.values[0];
-                for (var measureIndex = 0; measureIndex < seriesData.values.length; measureIndex++) {
-                    this.total += Math.abs(seriesData.values[measureIndex]);
-                    this.highlightTotal += this.hasHighlights ? Math.abs(seriesData.highlights[measureIndex]) : 0;
+                for (var seriesIndex = 0; seriesIndex < this.seriesCount; seriesIndex++) {
+                    var seriesData = dataViewCategorical.values[seriesIndex];
+                    if (!seriesData.source.roles || seriesData.source.roles['Y']) {
+                        for (var measureIndex = 0; measureIndex < seriesData.values.length; measureIndex++) {
+                            this.total += Math.abs(seriesData.values[measureIndex]);
+                            this.highlightTotal += this.hasHighlights ? Math.abs(seriesData.highlights[measureIndex]) : 0;
+                        }
+                    }
                 }
-
                 this.total = AxisHelper.normalizeNonFiniteNumber(this.total);
                 this.highlightTotal = AxisHelper.normalizeNonFiniteNumber(this.highlightTotal);
             }
