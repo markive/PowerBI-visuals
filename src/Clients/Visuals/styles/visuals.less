@@ -1822,6 +1822,15 @@ div.ql-toolbar {
      .label {font-size:11px }
 }
 
-#synopticLoader {
-    position:absolute; top:50%; height:25px !important; width:100%;
+.synopticLoader { 
+
+    display:none; position:absolute; top:40px; left:50%; margin-left: -140px; width:280px;z-index: 999; background: #fff;
+   
+    .file { visibility:hidden; height:0; width:0}
+    button {    
+        padding: 6px 12px !important; margin:3px; background:none; border:0; font-weight: normal; font-size: 12px; 
+        text-transform: uppercase; color: #333; vertical-align: middle;
+        
+        img { vertical-align:middle; display:inline-block; margin:-2px 5px 0 0; }
+    }
 }

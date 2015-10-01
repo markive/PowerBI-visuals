@@ -60,12 +60,12 @@ module powerbi.visuals {
                     formatString: {
                         type: { formatting: { formatString: true } },
                     },
-                    imageURL: {
-                        displayName: 'Image URL',
+                    imageData: {
+                        displayName: 'Image Data',
                         type: { text: true }
                     },
-                    areasURL: {
-                        displayName: 'Areas File URL',
+                    areasData: {
+                        displayName: 'Areas Data',
                         type: { text: true }
                     },
                     showAllAreas: {

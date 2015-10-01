@@ -59,16 +59,16 @@ module powerbi.visuals {
         dataState2?: SynopticPanelBySQLBIState;
         dataState3?: SynopticPanelBySQLBIState;
         saturationState?: SynopticPanelBySQLBIState;
-        imageURL?: string;
-        areasURL?: string;
+        initialImageData?: any;
+        initialAreasData?: any;
         showAllAreas?: boolean;
     }
 
     export var synopticPanelProps = {
         general: {
             formatString: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'formatString' },
-            imageURL: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'imageURL' },
-            areasURL: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'areasURL' },
+            imageData: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'imageData' },
+            areasData: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'areasData' },
             showAllAreas: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'showAllAreas' },
         },
         dataPoint: {
@@ -138,11 +138,10 @@ module powerbi.visuals {
         private interactivity: InteractivityOptions;
         private interactivityService: IInteractivityService;
         private isInteractive: boolean;
-        private lastAreasURL: string;
-        private lastImageURL: string;
-        private asyncRetrieving: boolean;
         private initialImageSize: SynopticPanelSize;
-        private areas: any;
+        private imageData: any;
+        private areasData: any;
+        private parsedAreas: any;
 
         //Capabilities - moved to SynopticPanelBySQLBI.capabilities.ts - left here only for online Developer Tool
         public static capabilities: VisualCapabilities = {
@@ -176,12 +175,12 @@ module powerbi.visuals {
                         formatString: {
                             type: { formatting: { formatString: true } },
                         },
-                        imageURL: {
-                            displayName: 'Image URL',
+                        imageData: {
+                            displayName: 'Image Data',
                             type: { text: true }
                         },
-                        areasURL: {
-                            displayName: 'Areas File URL',
+                        areasData: {
+                            displayName: 'Areas Data',
                             type: { text: true }
                         },
                         showAllAreas: {
@@ -365,9 +364,6 @@ module powerbi.visuals {
 
             this.interactivityService = createInteractivityService(this.host);
             this.legend = createLegend(this.element, this.isInteractive, this.interactivityService, true);
-   
-            this.asyncRetrieving = false;
-            this.loader = $('<div id="synopticLoader" class="powerbi-spinner"><div class="spinner"><div class="dots"><span>●</span><span>●</span> <span>●</span><span>●</span> <span>●</span></div></div></div>').appendTo(this.element).hide();
 
             this.data = {
                 dataPoints: [],
@@ -378,9 +374,40 @@ module powerbi.visuals {
 
             this.svg = d3.select(this.element.get(0))
                 .append('svg')
-                .classed(SynopticPanelBySQLBI.ClassName, true);
+                .classed(SynopticPanelBySQLBI.ClassName, true)
+                .on('click', () => this.selectionManager.clear().then(() => d3.selectAll('g.poly').style('opacity', 1)));
 
             this.svgAreas = this.svg.append('g');
+
+            this.loader = $('<div class="synopticLoader"><span><input type="file" class="file image" accept="image/*"><button class="fileChoose"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAVCAYAAABYHP4bAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAVFJREFUeNq8VdGNhCAQ5Yz/ZwmWYKIFWMKW4HWwJViCJXAVnCVQgMltCZRgCTfPPBKOA9xN5CaZNbAM780bGN76vm+VUvCSZmv5mei2EAiS0DUHetu2uQTKMAzHvpX6J6sTLEbKeUO24otkbCPrIEsj/z3OgKpIcCOfVRzBAMR4ScSDhJGY7mUgZmGE5UKmdwCSvU/ozkLPz4ClatQE43fxPZAMABMIkUwW7A+QBEKOVoI0WUPGT5nfA8lwUo0Xk5UxlVHn1QgbTgnJfIKO1Mo6nwOBPSU5WCYk2yNxE9ebEKzKXDQcii9k5snxS7IEyYlq6FMgMsfCDxb6W+bWmGQZsOb0wlJrzSID2HLuFpPsGYtdWO0V1zGEVG1OspdakIC4ttPFDsiVvW6ht2EnuLqpurszXrD3Iwkk8oyqkDmglk9DqRf2eMotpZpVOTM/AgwAeC+UFtc7FSAAAAAASUVORK5CYII="> Select Map</button></span><span><input type="file" class="file json" accept=".txt,.json"><button class="fileChoose"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAN1JREFUeNrUlM0NwjAMhd0q94YNMgJSc6cjwAYZIRvACIwAGzBCB8iBEWCDMkHwQw4K17gXLL1WjpRPjv+6nDN5709EFFkDtdsTDCMOYFNK6d5K46DACL34gwYmhvu2kyc/2DnLYasFfEzlIOS9Aoig4ifCNW11oJEKuZIDhS2sS8nhzLrJYash/47w5HEcM/4aMWNizX3VmFb5ZFu3zRVlZ6imD3esw7fKUhinmRSetuV/+hDr66hkvdDLpSiAbZADxfoK9foiDaxaDj/rSzspW9wvEU5KWBnf+BZgAJE6gni3MavDAAAAAElFTkSuQmCC">Select Areas</button></span></div>').appendTo(this.element);
+
+            var self = this;
+            $('.fileChoose').on('click', function (e) {
+                e.preventDefault();
+                $(this).prev('.file').trigger('click');
+            });
+            $('.file').on('change', function () {
+                if (this.files && this.files[0]) {
+                    var file = this.files[0];
+                    var fr = new FileReader();
+                    var isImage = $(this).hasClass('image');
+                    if (isImage) {
+                        fr.readAsDataURL(file);
+                    } else {
+                        fr.readAsText(file);
+                    }
+                    fr.onload = function () {
+                        if (isImage) {
+                            self.initialImageSize = null;
+                            self.imageData = fr.result;
+                        } else {
+                            self.parsedAreas = null;
+                            self.areasData = fr.result;
+                        }
+                        self.renderMap();
+                    };
+                }
+            });
         }
 
         //Convert the dataview into its view model
@@ -395,8 +422,8 @@ module powerbi.visuals {
                 var dataState2: SynopticPanelBySQLBIState;
                 var dataState3: SynopticPanelBySQLBIState;
                 var saturationState: SynopticPanelBySQLBIState;
-                var imageURL = '';
-                var areasURL = '';
+                var imageData;
+                var areasData;
                 var showAllAreas: boolean = true;
 
                 var dataViewMetadata = dataView.metadata;
@@ -427,8 +454,8 @@ module powerbi.visuals {
                             dataMin: DataViewObjects.getValue<number>(objects, synopticPanelProps.saturationState.dataMin, 0),
                             dataMax: DataViewObjects.getValue<number>(objects, synopticPanelProps.saturationState.dataMax, 0),
                         };
-                        imageURL = DataViewObjects.getValue<string>(objects, synopticPanelProps.general.imageURL);
-                        areasURL = DataViewObjects.getValue<string>(objects, synopticPanelProps.general.areasURL);
+                        imageData = DataViewObjects.getValue(objects, synopticPanelProps.general.imageData);
+                        areasData = DataViewObjects.getValue(objects, synopticPanelProps.general.areasData);
 
                         showAllAreas = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.general.showAllAreas, true);
                     }
@@ -436,7 +463,7 @@ module powerbi.visuals {
 
                 var converter = new SynopticPanelConversion.SynopticPanelConverter(dataView, colors, defaultDataPointColor);
                 converter.convert();
-  
+
                 return {
                     dataPoints: converter.dataPoints,
                     legendData: converter.legendData,
@@ -450,8 +477,8 @@ module powerbi.visuals {
                     dataState2: dataState2,
                     dataState3: dataState3,
                     saturationState: saturationState,
-                    imageURL: imageURL,
-                    areasURL: areasURL,
+                    initialImageData: imageData,
+                    initialAreasData: areasData,
                     showAllAreas: showAllAreas
                 };
 
@@ -468,13 +495,11 @@ module powerbi.visuals {
         }
 
         //Drawing the visual
-        //You can test with these URLS:
-        //imageURL = https://dl.dropboxusercontent.com/u/1822505/store-map.png
-        //areasURL = https://dl.dropboxusercontent.com/u/1822505/store-areas.json
         public update(options: VisualUpdateOptions) {
             if (!options.dataViews && !options.dataViews[0]) return;
             var dataView = this.dataView = options.dataViews[0];
             var currentViewport = this.currentViewport = options.viewport;
+
             this.data = SynopticPanelBySQLBI.converter(dataView, this.colors, currentViewport);
 
             if (this.interactivityService)
@@ -484,214 +509,208 @@ module powerbi.visuals {
                 .attr({
                     'height': currentViewport.height,
                     'width': currentViewport.width
-                })
-                .on('click', () => this.selectionManager.clear().then(() => d3.selectAll('g.poly').style('opacity', 1)));
+                });
             
-            this.renderLegend();
+            if (!this.imageData) this.imageData = this.data.initialImageData;
+            if (!this.areasData) this.areasData = this.data.initialAreasData;
 
-            //Parse areas
+            if (!this.imageData || !this.areasData) {
+
+                this.loader.show();
+
+            } else {
+
+                this.renderMap();
+            }
+
+        }
+
+        private renderMap() {
             var self = this;
-            var selectionManager = this.selectionManager;
-            var renderMap = function () {
-                if (self.data.imageURL  && self.data.imageURL !== '') { // && Utility.isValidImageDataUrl(self.data.imageURL)
-                    if (self.lastImageURL !== self.data.imageURL) {
-                        $('<img/>').attr('src', self.data.imageURL).load(function () {
-                            self.initialImageSize = { width: this.width, height: this.height };
-                            self.lastImageURL = self.data.imageURL;
+            if (this.imageData) {
 
-                            $(this).remove();
-                            self.svg.style('background', 'url(' + self.data.imageURL + ') no-repeat left top').style('background-size', 'contain');
-                            renderAreas();
-                            self.asyncRetrieving = false;
-                            self.loader.hide();
-                        });
+                this.data.initialImageData = this.imageData;
 
-                    } else {
-                        renderAreas();
-                        self.asyncRetrieving = false;
-                        self.loader.hide();
-                    }
-                } else {
-                    self.asyncRetrieving = false;
-                    self.loader.hide();
-                }
-            };
+                if (!this.initialImageSize) {
+                    $('<img/>').attr('src', this.imageData).load(function () {
+                        self.initialImageSize = { width: this.width, height: this.height };
 
-            var renderAreas = function(){
-                if (self.areas) {
-
-                    //Resize points
-                    var m = Math.min(self.currentViewport.width / self.initialImageSize.width, self.currentViewport.height / self.initialImageSize.height);
-
-                    var measureFormattersCache = dataLabelUtils.createColumnFormatterCacheManager();
-
-                    self.svgAreas.selectAll('g.poly').remove();
-
-                    var minSaturation: number, maxSaturation: number;
-
-                    for (var a = 0; a < self.areas.length; a++) {
-                        var area = self.areas[a];
-                        var convertedCoords = $.map(area.coords, function (v, i) {
-                            return [[v[0] * m, v[1] * m]];
-                        });
-                        var points = convertedCoords.join(',');
-
-                        var opacity = SynopticPanelBySQLBI.BaseOpacity;
-                        var color = self.data.defaultDataPointColor || self.colors.getColorByIndex(0).value;
-
-                        var found = false;
-                        var dataPoint: SynopticPanelDataPoint;
-
-                        for (var i = 0; i < self.data.dataPoints.length; i++) {
-                            dataPoint = self.data.dataPoints[i];
-
-                            if (dataPoint.label.toLowerCase() === area.name.toLowerCase() || dataPoint.categoryLabel.toLowerCase() === area.name.toLowerCase()) {
-                                found = true;
-                                color = dataPoint.color;
-                                opacity = SynopticPanelBySQLBI.BaseOpacity;
-  
-                                if (dataPoint.saturationMeasure) {
-
-                                    //Saturation
-                                    if (!minSaturation || !maxSaturation) {
-                                        minSaturation = self.data.saturationState.dataMin;
-                                        maxSaturation = self.data.saturationState.dataMax;
-                                        if (minSaturation === maxSaturation) {
-                                            //Automatic
-                                            minSaturation = <number>d3.min(self.data.dataPoints, function (d) { return d.saturationMeasure; });
-                                            maxSaturation = <number>d3.max(self.data.dataPoints, function (d) { return d.saturationMeasure; });
-                                        }
-                                    }
-
-                                    opacity = Math.min(SynopticPanelBySQLBI.BaseOpacity, (dataPoint.saturationMeasure / ((maxSaturation - minSaturation) / 100) / 100) * SynopticPanelBySQLBI.BaseOpacity);
-
-                                } else if (dataPoint.stateMeasure) {
-
-                                    //States
-                                    if (dataPoint.stateMeasure <= self.data.dataState1.dataMax && dataPoint.stateMeasure >= self.data.dataState1.dataMin) {
-                                        color = self.data.dataState1.color;
-                                    } else if (dataPoint.stateMeasure <= self.data.dataState2.dataMax && dataPoint.stateMeasure >= self.data.dataState2.dataMin) {
-                                        color = self.data.dataState2.color;
-                                    } else if (dataPoint.stateMeasure <= self.data.dataState3.dataMax && dataPoint.stateMeasure >= self.data.dataState3.dataMin) {
-                                        color = self.data.dataState3.color;
-                                    } else {
-                                        color = self.data.defaultDataPointColor;
-                                    }
-                                }
-
-                                break;
-                            }
-                        }
-
-                        if (self.data.showAllAreas || found) {
-
-                            var g = self.svgAreas
-                                .append('g')
-                                .data([dataPoint])
-                                .classed('poly', true);
-
-                            //Highlight
-                            if (self.data.hasHighlights || (self.interactivityService && self.interactivityService.hasSelection()))
-                                g.style('opacity', (dataPoint.selected ? 1 : 0.3));
-
-                            g
-                                .append('polygon')
-                                .attr('points', points)
-                                .attr('fill', color)
-                                .attr('fill-opacity', opacity)
-                                .attr('stroke', color)
-                                .attr('stroke-width', '2')
-                                .attr('stroke-opacity', opacity);
-                                
-                            if (found) {
-
-                                TooltipManager.addTooltip(g, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
-
-                                if (self.data.dataLabelsSettings.show || self.data.dataLabelsSettings.showCategory) {
-
-                                    var minX: number = <number>d3.min(convertedCoords, function (d) { return d[0]; });
-                                    var maxX: number = <number>d3.max(convertedCoords, function (d) { return d[0]; });
-                                    var minY: number = <number>d3.min(convertedCoords, function (d) { return d[1]; });
-                                    var maxY: number = <number>d3.max(convertedCoords, function (d) { return d[1]; });
-                                    var polyWidth: number = (maxX - minX);
-                                    var polyHeight: number = (maxY - minY);
-
-                                    var rotateText = self.data.dataLabelsSettings.showCategory && (polyHeight > polyWidth && polyWidth < 40);
-                                    var labelText;
-                                    if (self.data.dataLabelsSettings.show) {
-                                        var alternativeScale: number = (self.data.dataLabelsSettings.displayUnits === 0 ?
-                                            <number>d3.max(self.data.dataPoints, d => Math.abs(d.measure)) : null);
-
-                                        var measureFormatter = measureFormattersCache.getOrCreate(dataPoint.labelFormatString, self.data.dataLabelsSettings, alternativeScale);
-
-                                        labelText = dataLabelUtils.getLabelFormattedText(dataPoint.measure, (rotateText ? polyHeight : polyWidth), dataPoint.labelFormatString, measureFormatter);
-
-                                    } else {
-
-                                        labelText = dataLabelUtils.getLabelFormattedText(dataPoint.label, (rotateText ? polyHeight : polyWidth) - 10, dataPoint.labelFormatString);
-
-                                    }
-
-                                    var labelWidth = TextMeasurementService.measureSvgTextWidth({ fontFamily: dataLabelUtils.LabelTextProperties.fontFamily, fontSize: '11px', text: labelText });
-
-                                    var l = g.append('text')
-                                        .attr('x', minX + (rotateText ? (polyWidth / 2) : ((polyWidth - labelWidth) / 2)))
-                                        .attr('y', minY + (rotateText ? ((polyHeight - labelWidth) / 2) : (polyHeight / 2) + 5))
-                                        .attr('fill', self.autoTextColor(color))
-                                        .classed('label', true)
-                                        .text(labelText);
-
-                                    if (rotateText)
-                                        l.style('writing-mode', 'tb');
-                                }
-                            }
-                        }
-                        
-                    }
-                    
-                    d3.selectAll('g.poly')
-                        .on('click', function (d) {
-               
-                            selectionManager.select(d.identity).then((ids) => {
-                                if (ids.length > 0) {
-                                    d3.selectAll('g.poly').style('opacity', 0.3);
-                                    d3.select(this).style('opacity', 1);
-                                } else {
-                                    d3.selectAll('g.poly').style('opacity', 1);
-                                }
-                                
-                        });
-
-                            d3.event.stopPropagation();
-                        });
-
-                }
-
-            };
-
-            if (!this.asyncRetrieving) {
-                if ((this.lastAreasURL !== this.data.areasURL || !this.areas) && this.data.areasURL && this.data.areasURL !== '') {
-
-                    this.loader.show();
-
-                    //Parse JSON areas
-                    //We used this approach because textual field are limited to 250 characters 
-                    
-                    $.getJSON(this.data.areasURL, function (d) {
-                        self.areas = d.areas;
-                        renderMap();
+                        $(this).remove();
+                        self.svg.style('background', 'url(' + self.imageData + ') no-repeat left top').style('background-size', 'contain');
+                        self.renderAreas();
                     });
 
-                    this.asyncRetrieving = true;
-                    this.lastAreasURL = this.data.areasURL;
-
-                    var self = this;
-                    setTimeout(function () { self.asyncRetrieving = false; }, 2000);
                 } else {
-                    renderMap();
+                    this.renderAreas();
                 }
+
             }
-        } 
+        }
+
+        private renderAreas() {
+
+            var selectionManager = this.selectionManager;
+
+            if (this.areasData) {
+
+                this.data.initialAreasData = this.areasData;
+
+                this.loader.hide();
+
+                if (!this.parsedAreas) {
+                    var json = JSON.parse(this.areasData);
+                    this.parsedAreas = json.areas;
+                }
+                var areas = this.parsedAreas;
+
+                //Resize points
+                var m = Math.min(this.currentViewport.width / this.initialImageSize.width, this.currentViewport.height / this.initialImageSize.height);
+
+                var measureFormattersCache = dataLabelUtils.createColumnFormatterCacheManager();
+
+                this.svgAreas.selectAll('g.poly').remove();
+
+                var minSaturation: number, maxSaturation: number;
+
+                for (var a = 0; a < areas.length; a++) {
+                    var area = areas[a];
+                    var convertedCoords = $.map(area.coords, function (v, i) {
+                        return [[v[0] * m, v[1] * m]];
+                    });
+                    var points = convertedCoords.join(',');
+
+                    var opacity = SynopticPanelBySQLBI.BaseOpacity;
+                    var color = this.data.defaultDataPointColor || this.colors.getColorByIndex(0).value;
+
+                    var found = false;
+                    var dataPoint: SynopticPanelDataPoint;
+
+                    for (var i = 0; i < this.data.dataPoints.length; i++) {
+                        dataPoint = this.data.dataPoints[i];
+
+                        if (dataPoint.label.toLowerCase() === area.name.toLowerCase() || dataPoint.categoryLabel.toLowerCase() === area.name.toLowerCase()) {
+                            found = true;
+                            color = dataPoint.color;
+                            opacity = SynopticPanelBySQLBI.BaseOpacity;
+  
+                            if (dataPoint.saturationMeasure) {
+
+                                //Saturation
+                                if (!minSaturation || !maxSaturation) {
+                                    minSaturation = this.data.saturationState.dataMin;
+                                    maxSaturation = this.data.saturationState.dataMax;
+                                    if (minSaturation === maxSaturation) {
+                                        //Automatic
+                                        minSaturation = <number>d3.min(this.data.dataPoints, function (d) { return d.saturationMeasure; });
+                                        maxSaturation = <number>d3.max(this.data.dataPoints, function (d) { return d.saturationMeasure; });
+                                    }
+                                }
+
+                                opacity = Math.min(SynopticPanelBySQLBI.BaseOpacity, (dataPoint.saturationMeasure / ((maxSaturation - minSaturation) / 100) / 100) * SynopticPanelBySQLBI.BaseOpacity);
+
+                            } else if (dataPoint.stateMeasure) {
+
+                                //States
+                                if (dataPoint.stateMeasure <= this.data.dataState1.dataMax && dataPoint.stateMeasure >= this.data.dataState1.dataMin) {
+                                    color = this.data.dataState1.color;
+                                } else if (dataPoint.stateMeasure <= this.data.dataState2.dataMax && dataPoint.stateMeasure >= this.data.dataState2.dataMin) {
+                                    color = this.data.dataState2.color;
+                                } else if (dataPoint.stateMeasure <= this.data.dataState3.dataMax && dataPoint.stateMeasure >= this.data.dataState3.dataMin) {
+                                    color = this.data.dataState3.color;
+                                } else {
+                                    color = this.data.defaultDataPointColor;
+                                }
+                            }
+
+                            break;
+                        }
+                    }
+
+                    if (this.data.showAllAreas || found) {
+
+                        var g = this.svgAreas
+                            .append('g')
+                            .data([dataPoint])
+                            .classed('poly', true);
+
+                        //Highlight
+                        if (this.data.hasHighlights || (this.interactivityService && this.interactivityService.hasSelection()))
+                            g.style('opacity', (dataPoint.selected ? 1 : 0.3));
+
+                        g
+                            .append('polygon')
+                            .attr('points', points)
+                            .attr('fill', color)
+                            .attr('fill-opacity', opacity)
+                            .attr('stroke', color)
+                            .attr('stroke-width', '2')
+                            .attr('stroke-opacity', opacity);
+                                
+                        if (found) {
+
+                            TooltipManager.addTooltip(g, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
+
+                            if (this.data.dataLabelsSettings.show || this.data.dataLabelsSettings.showCategory) {
+
+                                var minX: number = <number>d3.min(convertedCoords, function (d) { return d[0]; });
+                                var maxX: number = <number>d3.max(convertedCoords, function (d) { return d[0]; });
+                                var minY: number = <number>d3.min(convertedCoords, function (d) { return d[1]; });
+                                var maxY: number = <number>d3.max(convertedCoords, function (d) { return d[1]; });
+                                var polyWidth: number = (maxX - minX);
+                                var polyHeight: number = (maxY - minY);
+
+                                var rotateText = this.data.dataLabelsSettings.showCategory && (polyHeight > polyWidth && polyWidth < 40);
+                                var labelText;
+                                if (this.data.dataLabelsSettings.show) {
+                                    var alternativeScale: number = (this.data.dataLabelsSettings.displayUnits === 0 ?
+                                        <number>d3.max(this.data.dataPoints, d => Math.abs(d.measure)) : null);
+
+                                    var measureFormatter = measureFormattersCache.getOrCreate(dataPoint.labelFormatString, this.data.dataLabelsSettings, alternativeScale);
+
+                                    labelText = dataLabelUtils.getLabelFormattedText(dataPoint.measure, (rotateText ? polyHeight : polyWidth), dataPoint.labelFormatString, measureFormatter);
+
+                                } else {
+
+                                    labelText = dataLabelUtils.getLabelFormattedText(dataPoint.label, (rotateText ? polyHeight : polyWidth) - 10, dataPoint.labelFormatString);
+
+                                }
+
+                                var labelWidth = TextMeasurementService.measureSvgTextWidth({ fontFamily: dataLabelUtils.LabelTextProperties.fontFamily, fontSize: '11px', text: labelText });
+
+                                var l = g.append('text')
+                                    .attr('x', minX + (rotateText ? (polyWidth / 2) : ((polyWidth - labelWidth) / 2)))
+                                    .attr('y', minY + (rotateText ? ((polyHeight - labelWidth) / 2) : (polyHeight / 2) + 5))
+                                    .attr('fill', this.autoTextColor(color))
+                                    .classed('label', true)
+                                    .text(labelText);
+
+                                if (rotateText)
+                                    l.style('writing-mode', 'tb');
+                            }
+                        }
+                    }
+                        
+                }
+                
+                d3.selectAll('g.poly')
+                    .on('click', function (d) {
+               
+                        selectionManager.select(d.identity).then((ids) => {
+                            if (ids.length > 0) {
+                                d3.selectAll('g.poly').style('opacity', 0.3);
+                                d3.select(this).style('opacity', 1);
+                            } else {
+                                d3.selectAll('g.poly').style('opacity', 1);
+                            }
+                                
+                    });
+
+                        d3.event.stopPropagation();
+                    });
+
+                this.renderLegend();
+            }
+        }
 
         private autoTextColor(backColor) {
 
@@ -739,8 +758,8 @@ module powerbi.visuals {
                             objectName: 'general',
                             selector: null,
                             properties: {
-                                imageURL: this.data.imageURL,
-                                areasURL: this.data.areasURL,
+                                imageData: this.data.initialImageData,
+                                areasData: this.data.initialAreasData,
                                 showAllAreas: this.data.showAllAreas
                             },
                         });
@@ -750,7 +769,7 @@ module powerbi.visuals {
                 case 'legend':
                     if (this.data) {
                         var legendObjectProperties: DataViewObjects = { legend: this.data.legendObjectProperties };
-
+                        
                         var  show = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.show, this.legend.isVisible());
                         var showTitle = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.showTitle, true);
                         var titleText = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.titleText, this.data.legendData.title);
