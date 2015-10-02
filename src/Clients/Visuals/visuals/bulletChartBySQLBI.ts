@@ -64,9 +64,119 @@ module powerbi.visuals {
         //private legend: ILegend;
 
         //Capabilities - moved to BulletChartBySQLBI.capabilities.ts
-        /*public static capabilities: VisualCapabilities = {
+        public static capabilities: VisualCapabilities = {
+            dataRoles: [
+                {
+                    name: 'Y',
+                    kind: VisualDataRoleKind.Measure,
+                    displayName: data.createDisplayNameGetter('Role_DisplayName_Value'),
+                }, {
+                    name: 'ComparisonValue',
+                    kind: VisualDataRoleKind.Measure,
+                    displayName: 'Comparison Value',
+                }, {
+                    name: 'TargetValue',
+                    kind: VisualDataRoleKind.Measure,
+                    displayName: data.createDisplayNameGetter('Role_DisplayName_TargetValue'),
+                }, {
+                    name: 'MinValue',
+                    kind: VisualDataRoleKind.Measure,
+                    displayName: data.createDisplayNameGetter('Role_DisplayName_MinValue'),
+                }, {
+                    name: 'MaxValue',
+                    kind: VisualDataRoleKind.Measure,
+                    displayName: data.createDisplayNameGetter('Role_DisplayName_MaxValue'),
 
-        };*/
+                }, {
+                    name: 'QualitativeState1Value',
+                    kind: VisualDataRoleKind.Measure,
+                    displayName: 'Qualitative State 1',
+                }, {
+                    name: 'QualitativeState2Value',
+                    kind: VisualDataRoleKind.Measure,
+                    displayName: 'Qualitative State 2',
+                }, {
+                    name: 'QualitativeState3Value',
+                    kind: VisualDataRoleKind.Measure,
+                    displayName: 'Qualitative State 3',
+                }
+            ],
+            objects: {
+
+                general: {
+                    displayName: data.createDisplayNameGetter('Visual_General'),
+                    properties: {
+                        fill: {
+                            type: { fill: { solid: { color: true } } },
+                            displayName: 'Main Color'
+                        },
+                        fill2: {
+                            type: { fill: { solid: { color: true } } },
+                            displayName: 'Comparison Color'
+                        },
+                    },
+                },
+
+                label: {
+                    displayName: "Label",
+                    properties: {
+                        show: {
+                            displayName: data.createDisplayNameGetter('Visual_Show'),
+                            type: { bool: true }
+                        },
+                        text: {
+                            type: { text: true },
+                            displayName: 'Text'
+                        },
+                        text2: {
+                            type: { text: true },
+                            displayName: 'Category'
+                        },
+                    },
+                },
+                /*legend: {
+                    displayName: data.createDisplayNameGetter('Visual_Legend'),
+                    properties: {
+                        show: {
+                            displayName: data.createDisplayNameGetter('Visual_Show'),
+                            type: { bool: true }
+                        },
+                        position: {
+                            displayName: data.createDisplayNameGetter('Visual_LegendPosition'),
+                            type: { formatting: { legendPosition: true } }
+                        },
+                        showTitle: {
+                            displayName: data.createDisplayNameGetter('Visual_LegendShowTitle'),
+                            type: { bool: true }
+                        },
+                        titleText: {
+                            displayName: data.createDisplayNameGetter('Visual_LegendTitleText'),
+                            type: { text: true }
+                        }
+                    }
+                },*/
+            },
+            dataViewMappings: [{
+                conditions: [
+                    { 'Y': { max: 1 }, 'ComparisonValue': { max: 1 }, 'TargetValue': { max: 1 }, 'MinValue': { max: 1 }, 'MaxValue': { max: 1 }, 'QualitativeState1Value': { max: 1 }, 'QualitativeState2Value': { max: 1 }, 'QualitativeState3Value': { max: 1 } },
+                ],
+                categorical: {
+                    values: {
+                        select: [
+                            { bind: { to: 'Y' } },
+                            { bind: { to: 'ComparisonValue' } },
+                            { bind: { to: 'TargetValue' } },
+                            { bind: { to: 'MinValue' } },
+                            { bind: { to: 'MaxValue' } },
+                            { bind: { to: 'QualitativeState1Value' } },
+                            { bind: { to: 'QualitativeState2Value' } },
+                            { bind: { to: 'QualitativeState3Value' } },
+                        ]
+                    },
+                },
+            }],
+            suppressDefaultTitle: true,
+        };
 
         //One time setup
         public init(options: VisualInitOptions): void {

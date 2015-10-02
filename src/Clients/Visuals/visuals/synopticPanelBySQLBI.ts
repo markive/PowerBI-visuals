@@ -4,6 +4,7 @@
  *
  *  Known issues: 
  *  - Map image and Areas json file are not saved between sessions 
+ *  - Sometimes the property panel for the visual is empty. To solve you have to switch visual to Pie Chart, active the legend and switch back to Synoptic Panel 
  *
  *  Power BI Visualizations
  *
@@ -403,7 +404,7 @@ module powerbi.visuals {
             this.colors = this.style.colorPalette.dataColors;
             this.interactivity = options.interactivity;
             this.isInteractive = options.interactivity && options.interactivity.isInteractiveLegend;
-            this.inEditingMode = false; //(this.host.getViewMode() === ViewMode.Edit);
+            this.inEditingMode = (this.host.getViewMode() === ViewMode.Edit);
             this.interactivityService = createInteractivityService(this.host);
             this.legend = createLegend(this.element, this.isInteractive, this.interactivityService, true);
 
@@ -547,7 +548,7 @@ module powerbi.visuals {
         public update(options: VisualUpdateOptions) {
             if (!options.dataViews && !options.dataViews[0]) return;
 
-            if (options.viewMode) this.inEditingMode = (options.viewMode === 1);
+            this.inEditingMode = (this.host.getViewMode() === ViewMode.Edit);
 
             var dataView = this.dataView = options.dataViews[0];
             var currentViewport = this.currentViewport = options.viewport;
