@@ -426,11 +426,11 @@ module powerbi.visuals {
             this.loader = $('<div class="synopticLoader"><span><input type="file" class="file image" accept="image/*"><button class="fileChoose"><svg width="20" height="16"><g><path fill="#595959" d="M20,16.1H0V-0.1h20V16.1z M1,15.1h18V0.9H1V15.1z M16.3,12.8H3.7v-1.7l3-3.9l1.7,1.4l3.4-5.1l4.4,4.6V12.8z M4.7,11.8h10.6V8.6L12,5.2l-3.3,5L6.9,8.7l-2.2,2.8V11.8z M5.7,7.1c-0.6,0-1-0.2-1.4-0.6C3.9,6.1,3.7,5.6,3.7,5.1 c0-0.5,0.2-1,0.6-1.4c0.7-0.7,2-0.8,2.8,0c0.4,0.4,0.6,0.8,0.6,1.4c0,0.5-0.2,1-0.6,1.4C6.7,6.9,6.2,7.1,5.7,7.1z M5.7,4.1 C5.4,4.1,5.2,4.2,5,4.4C4.8,4.6,4.7,4.8,4.7,5.1c0,0.3,0.1,0.5,0.3,0.7c0.4,0.4,1,0.4,1.4,0c0.2-0.2,0.3-0.4,0.3-0.7 c0-0.3-0.1-0.5-0.3-0.7C6.2,4.2,5.9,4.1,5.7,4.1z"/></g></svg> Select Map</button></span><span><input type="file" class="file json" accept=".txt,.json"><button class="fileChoose"><svg width="22" height="16"><path Fill="#595959" d="M22,4.6L12.9,0L0,6.5l4.8,2.4L0,11.4L9.1,16L22,9.4L17.2,7L22,4.6z M12.9,0.9l7.2,3.7l-11,5.6 L1.9, 6.5L12.9, 0.9z"/></svg> Select Areas</button></span></div>').appendTo(this.element);
 
             var self = this;
-            $('.fileChoose').on('click', function (e) {
+            this.loader.find('.fileChoose').on('click', function (e) {
                 e.preventDefault();
                 $(this).prev('.file').trigger('click');
             });
-            $('.file').on('change', function () {
+            this.loader.find('.file').on('change', function () {
                 if (this.files && this.files[0]) {
                     var file = this.files[0];
                     var fr = new FileReader();
@@ -734,15 +734,16 @@ module powerbi.visuals {
                 }
 
                 if (this.isInteractive) {
-                    d3.selectAll('g.poly')
+                    var self = this;
+                    this.svgAreas.selectAll('g.poly')
                         .on('click', function (d) {
 
                             selectionManager.select(d.identity).then((ids) => {
                                 if (ids.length > 0) {
-                                    d3.selectAll('g.poly').style('opacity', 0.4);
+                                    self.svgAreas.selectAll('g.poly').style('opacity', 0.4);
                                     d3.select(this).style('opacity', 1);
                                 } else {
-                                    d3.selectAll('g.poly').style('opacity', 1);
+                                    self.svgAreas.selectAll('g.poly').style('opacity', 1);
                                 }
 
                             });
@@ -752,7 +753,7 @@ module powerbi.visuals {
                 } else if (this.interactivityService) {
 
                     var behaviorOptions: SynopticPanelBySQLBIBehaviorOptions = {
-                        polygons: d3.selectAll('g.poly'),
+                        polygons: this.svgAreas.selectAll('g.poly'),
                         clearCatcher: this.clearCatcher,
                         hasHighlights: this.data.hasHighlights,
                     };
@@ -800,26 +801,25 @@ module powerbi.visuals {
         }
 
         private persistExternalData(propertyName: string): void {
-
             switch (propertyName) {
                 case 'imageData':
-                    this.host.persistProperties({
+                    this.host.persistProperties([{
                         objectName: 'general',
                         selector: null,
                         properties: {
                             imageData: this.imageData,
                         },
-                    });
+                    }]);
                     break;
 
                 case 'areasData':
-                    this.host.persistProperties({
+                    this.host.persistProperties([{
                         objectName: 'general',
                         selector: null,
                         properties: {
                             areasData: this.areasData,
                         },
-                    });
+                    }]);
                     break;
             }
         }
@@ -835,8 +835,8 @@ module powerbi.visuals {
                             objectName: 'general',
                             selector: null,
                             properties: {
-                                imageData: this.imageData,
-                                areasData: this.areasData,
+                                //imageData: this.imageData,
+                                //areasData: this.areasData,
                                 showAllAreas: this.data.showAllAreas
                             },
                         });
