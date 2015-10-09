@@ -5,9 +5,7 @@ The Microsoft Power BI visuals project provides high quality data visualizations
 
 ## Power BI Best Visuals Contest
 
-Please vote our custom visuals for the [Power BI Best Visuals Contest](http://community.powerbi.com/t5/Best-Visual-Contest/con-p/best_visual_contest/tab/entries):
-
-- **Synoptic Panel by SQLBI** - [Spread the word!](https://twitter.com/DanielePerilli/status/649176441964335104)
+- **Synoptic Panel by SQLBI** - [Grand Prize winner of the Power BI Best Visuals Contest](http://community.powerbi.com/t5/Best-Visual-Contest/con-p/best_visual_contest/tab/winners)
 
 The Synoptic Panel connects areas in a picture with attributes in the data model, coloring each area with a state (red/yellow/green) or with a saturation of a color related to the value of a measure. Starting from any image, you draw custom areas using http://synoptic.design, which generates a JSON file you import in the Synoptic Panel. You can visualize data over a map, a planimetry, a diagram, a flow chart.
 
@@ -17,14 +15,14 @@ https://youtu.be/N7ZjAVvYeXM
 
 ![alt tag](synopticpanel-screenshot2.png)
 
-- **Bullet Chart by SQLBI** - 1st winner of the People Choice Award
+- **Bullet Chart by SQLBI** - 1st winner of the Power BI Best Visuals Contest's People Choice Award
 
 Inspired by Stephen Few, here is the Power BI implementation of this beautiful space-saving indicator. It allows you to bind a main measure, a target, and a comparison measure.
 
 ![alt tag](bulletchart-screenshot.png)
 
 
-- **Card with States by SQLBI** - [Spread the word!](https://twitter.com/DanielePerilli/status/644449949388808192)
+- **Card with States by SQLBI**
 
 Based on the Power BI builtin Card, this visual allows you to bind a performance value and define up to 3 states that determine the color of the main label. 
 Plus: the Category Label is now fully customizable.
