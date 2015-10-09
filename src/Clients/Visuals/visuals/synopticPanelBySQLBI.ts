@@ -185,7 +185,7 @@ module powerbi.visuals {
         private parsedAreas: any;
         private inEditingMode: boolean;
 
-        //Capabilities - moved to SynopticPanelBySQLBI.capabilities.ts - left here only for online Developer Tool
+        //Capabilities
         public static capabilities: VisualCapabilities = {
              dataRoles: [
                 {

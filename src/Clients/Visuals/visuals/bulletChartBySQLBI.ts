@@ -63,7 +63,7 @@ module powerbi.visuals {
         private dataView: DataView;
         //private legend: ILegend;
 
-        //Capabilities - moved to BulletChartBySQLBI.capabilities.ts
+        //Capabilities
         public static capabilities: VisualCapabilities = {
             dataRoles: [
                 {
