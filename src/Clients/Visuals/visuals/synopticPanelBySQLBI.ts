@@ -4,7 +4,6 @@
  *
  *  Known issues: 
  *  - Map image and Areas json file are not saved between sessions 
- *  - Sometimes the property panel for the visual is empty. To solve you have to switch visual to Pie Chart, active the legend and switch back to Synoptic Panel 
  *
  *  Power BI Visualizations
  *
@@ -63,8 +62,8 @@ module powerbi.visuals {
         dataState2?: SynopticPanelBySQLBIState;
         dataState3?: SynopticPanelBySQLBIState;
         saturationState?: SynopticPanelBySQLBIState;
-        imageData?: any;
-        areasData?: any;
+        imageData?: string;
+        areasData?: string;
         showAllAreas?: boolean;
     }
 
@@ -143,9 +142,9 @@ module powerbi.visuals {
     };
     
     export interface SynopticPanelBySQLBIState {
-        color?: string;
         dataMin: number;
         dataMax: number;
+        color?: string;
     }
 
     export interface SynopticPanelSize {
@@ -180,10 +179,38 @@ module powerbi.visuals {
         private interactivityService: IInteractivityService;
         private isInteractive: boolean;
         private initialImageSize: SynopticPanelSize;
-        private imageData: any;
-        private areasData: any;
         private parsedAreas: any;
         private inEditingMode: boolean;
+
+        public static getDefaultData(): SynopticPanelBySQLBIData {
+            return {
+                dataPoints: [],
+                legendData: { title: '', dataPoints: [] },
+                hasHighlights: false,
+                dataLabelsSettings: dataLabelUtils.getDefaultLabelSettings(),
+                showAllAreas: false,
+                showAllDataPoints: false,
+                dataState1: {
+                    color: '#FD625E', //Red
+                    dataMin: -Infinity,
+                    dataMax: 0
+                },
+                dataState2: {
+                    color: '#F2C811', //Yellow
+                    dataMin: 0,
+                    dataMax: 1
+                },
+                dataState3: {
+                    color: '#7DC172', //Green
+                    dataMin: 1,
+                    dataMax: Infinity
+                },
+                saturationState: {
+                    dataMin: 0,
+                    dataMax: 0
+                },
+            };
+        }
 
         //Capabilities
         public static capabilities: VisualCapabilities = {
@@ -443,13 +470,12 @@ module powerbi.visuals {
                     fr.onload = function () {
                         if (isImage) {
                             self.initialImageSize = null;
-                            self.imageData = fr.result;
-                            self.persistExternalData('imageData');
+                            self.data.imageData = fr.result;
                         } else {
                             self.parsedAreas = null;
-                            self.areasData = fr.result;
-                            self.persistExternalData('areasData');
+                            self.data.areasData = fr.result;
                         }
+                        self.persistGeneralData();
                         self.renderMap();
                     };
                 }
@@ -459,18 +485,12 @@ module powerbi.visuals {
         //Convert the dataview into its view model
 
         public static converter(dataView: DataView, colors: IDataColorPalette, viewport?: IViewport): SynopticPanelBySQLBIData {
- 
+
+            var data: SynopticPanelBySQLBIData = SynopticPanelBySQLBI.getDefaultData();
+
             if (dataView.categorical) {
 
                 var defaultDataPointColor = undefined;
-                var showAllDataPoints = undefined;
-                var dataState1: SynopticPanelBySQLBIState;
-                var dataState2: SynopticPanelBySQLBIState;
-                var dataState3: SynopticPanelBySQLBIState;
-                var saturationState: SynopticPanelBySQLBIState;
-                var imageData;
-                var areasData;
-                var showAllAreas: boolean = true;
 
                 var dataViewMetadata = dataView.metadata;
                 if (dataViewMetadata) {
@@ -479,65 +499,50 @@ module powerbi.visuals {
                     if (objects) {
 
                         defaultDataPointColor = DataViewObjects.getFillColor(objects, synopticPanelProps.dataPoint.defaultColor);
-                        showAllDataPoints = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataPoint.showAllDataPoints);
+                        data.defaultDataPointColor = defaultDataPointColor;
 
-                        dataState1 = {
-                            color: DataViewObjects.getFillColor(objects, synopticPanelProps.dataState1.color, '#FD625E'),
-                            dataMin: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState1.dataMin, -Infinity),
-                            dataMax: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState1.dataMax, 0),
-                        };
-                        dataState2 = {
-                            color: DataViewObjects.getFillColor(objects, synopticPanelProps.dataState2.color, '#F2C811'),
-                            dataMin: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState2.dataMin, 0),
-                            dataMax: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState2.dataMax, 1),
-                        };
-                        dataState3 = {
-                            color: DataViewObjects.getFillColor(objects, synopticPanelProps.dataState3.color, '#7DC172'),
-                            dataMin: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState3.dataMin, 1),
-                            dataMax: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState3.dataMax, Infinity),
-                        };
-                        saturationState = {
-                            dataMin: DataViewObjects.getValue<number>(objects, synopticPanelProps.saturationState.dataMin, 0),
-                            dataMax: DataViewObjects.getValue<number>(objects, synopticPanelProps.saturationState.dataMax, 0),
-                        };
-                        imageData = DataViewObjects.getValue(objects, synopticPanelProps.general.imageData);
-                        areasData = DataViewObjects.getValue(objects, synopticPanelProps.general.areasData);
+                        data.showAllDataPoints = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataPoint.showAllDataPoints, data.showAllDataPoints);
 
-                        showAllAreas = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.general.showAllAreas, true);
+                        data.dataState1 = {
+                            color: DataViewObjects.getFillColor(objects, synopticPanelProps.dataState1.color, data.dataState1.color),
+                            dataMin: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState1.dataMin, data.dataState1.dataMin),
+                            dataMax: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState1.dataMax, data.dataState1.dataMax),
+                        };
+                        data.dataState2 = {
+                            color: DataViewObjects.getFillColor(objects, synopticPanelProps.dataState2.color, data.dataState2.color),
+                            dataMin: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState2.dataMin, data.dataState2.dataMin),
+                            dataMax: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState2.dataMax, data.dataState2.dataMax),
+                        };
+                        data.dataState3 = {
+                            color: DataViewObjects.getFillColor(objects, synopticPanelProps.dataState3.color, data.dataState3.color),
+                            dataMin: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState3.dataMin, data.dataState3.dataMin),
+                            dataMax: DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState3.dataMax, data.dataState3.dataMax),
+                        };
+
+                        data.saturationState = {
+                            dataMin: DataViewObjects.getValue<number>(objects, synopticPanelProps.saturationState.dataMin, data.saturationState.dataMin),
+                            dataMax: DataViewObjects.getValue<number>(objects, synopticPanelProps.saturationState.dataMax, data.saturationState.dataMax),
+                        };
+
+                        data.imageData = DataViewObjects.getValue<string>(objects, synopticPanelProps.general.imageData);
+                        data.areasData = DataViewObjects.getValue<string>(objects, synopticPanelProps.general.areasData);
+
+                        data.showAllAreas = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.general.showAllAreas, data.showAllAreas);
                     }
                 }
 
                 var converter = new SynopticPanelConversion.SynopticPanelConverter(dataView, colors, defaultDataPointColor);
                 converter.convert();
 
-                return {
-                    dataPoints: converter.dataPoints,
-                    legendData: converter.legendData,
-                    dataLabelsSettings: converter.dataLabelsSettings,
-                    maxValue: converter.maxValue,
-                    legendObjectProperties: converter.legendObjectProperties,
-                    hasHighlights: converter.hasHighlights,
-                    showAllDataPoints: showAllDataPoints,
-                    defaultDataPointColor: defaultDataPointColor,
-                    dataState1: dataState1,
-                    dataState2: dataState2,
-                    dataState3: dataState3,
-                    saturationState: saturationState,
-                    imageData: imageData,
-                    areasData: areasData,
-                    showAllAreas: showAllAreas
-                };
+                data.dataPoints = converter.dataPoints;
+                data.legendData = converter.legendData;
+                data.legendObjectProperties = converter.legendObjectProperties;
+                data.dataLabelsSettings = converter.dataLabelsSettings;
+                data.maxValue = converter.maxValue;
+                data.hasHighlights = converter.hasHighlights;
+            } 
 
-            } else {
-                return {
-                    dataPoints: [],
-                    legendData: { title: '', dataPoints: [] },
-                    hasHighlights: false,
-                    dataLabelsSettings: dataLabelUtils.getDefaultLabelSettings(),
-                    showAllAreas: true
-                };
-            }
-
+            return data;
         }
 
         public onViewModeChanged(viewMode: ViewMode): void {
@@ -549,7 +554,7 @@ module powerbi.visuals {
             if (!options.dataViews && !options.dataViews[0]) return;
 
             this.inEditingMode = (this.host.getViewMode() === ViewMode.Edit);
-
+  
             var dataView = this.dataView = options.dataViews[0];
             var currentViewport = this.currentViewport = options.viewport;
 
@@ -563,26 +568,23 @@ module powerbi.visuals {
                     'height': currentViewport.height,
                     'width': currentViewport.width
                 });
-            
-            if (!this.imageData) this.imageData = this.data.imageData;
-            if (!this.areasData) this.areasData = this.data.areasData;
 
-            if (this.imageData && this.areasData)
-                this.renderMap();
+            this.renderMap();
 
             this.loader.toggle(this.inEditingMode);
         }
 
         private renderMap() {
             var self = this;
-            if (this.imageData) {
+            var imageData = this.data.imageData;
+            if (imageData) {
 
                 if (!this.initialImageSize) {
-                    $('<img/>').attr('src', this.imageData).load(function () {
+                    $('<img/>').attr('src', imageData).load(function () {
                         self.initialImageSize = { width: this.width, height: this.height };
 
                         $(this).remove();
-                        self.svg.style('background', 'url(' + self.imageData + ') no-repeat left top').style('background-size', 'contain');
+                        self.svg.style('background', 'url(' + imageData + ') no-repeat left top').style('background-size', 'contain');
                         self.renderAreas();
                     });
 
@@ -596,11 +598,11 @@ module powerbi.visuals {
         private renderAreas() {
 
             var selectionManager = this.selectionManager;
-
-            if (this.areasData) {
+            var areasData = this.data.areasData;
+            if (areasData) {
 
                 if (!this.parsedAreas) {
-                    var json = JSON.parse(this.areasData);
+                    var json = JSON.parse(areasData);
                     this.parsedAreas = json.areas;
                 }
                 var areas = this.parsedAreas;
@@ -800,185 +802,145 @@ module powerbi.visuals {
             }
         }
 
-        private persistExternalData(propertyName: string): void {
-            switch (propertyName) {
-                case 'imageData':
-                    this.host.persistProperties([{
-                        objectName: 'general',
-                        selector: null,
-                        properties: {
-                            imageData: this.imageData,
-                        },
-                    }]);
-                    break;
+        private persistGeneralData(): void {
 
-                case 'areasData':
-                    this.host.persistProperties([{
-                        objectName: 'general',
-                        selector: null,
-                        properties: {
-                            areasData: this.areasData,
-                        },
-                    }]);
-                    break;
-            }
+            this.host.persistProperties([{
+                objectName: 'general',
+                selector: null,
+                properties: {
+                    imageData: this.data.imageData,
+                    areasData: this.data.areasData,
+                    showAllAreas: this.data.showAllAreas
+                },
+            }]);
         }
 
         //Make visual properties available in the property pane in Power BI
         public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[]{
 
+            if (!this.data)
+                this.data = SynopticPanelBySQLBI.getDefaultData();
+
             var instances: VisualObjectInstance[] = [];
             switch (options.objectName) {
                 case 'general':
-                    if (this.data) {
-                        instances.push({
-                            objectName: 'general',
-                            selector: null,
-                            properties: {
-                                //imageData: this.imageData,
-                                //areasData: this.areasData,
-                                showAllAreas: this.data.showAllAreas
-                            },
-                        });
-                    }
+                    instances.push({
+                        objectName: 'general',
+                        selector: null,
+                        properties: {
+                            //imageData: this.data.imageData,
+                            //areasData: this.data.areasData,
+                            showAllAreas: this.data.showAllAreas
+                        },
+                    });
                     break;
 
                 case 'legend':
-                    if (this.data) {
-                        var legendObjectProperties: DataViewObjects = { legend: this.data.legendObjectProperties };
+                    var legendObjectProperties: DataViewObjects = { legend: this.data.legendObjectProperties };
                         
-                        var  show = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.show, this.legend.isVisible());
-                        var showTitle = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.showTitle, true);
-                        var titleText = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.titleText, this.data.legendData.title);
+                    var  show = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.show, this.legend.isVisible());
+                    var showTitle = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.showTitle, true);
+                    var titleText = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.titleText, this.data.legendData.title);
 
-                        instances.push({
-                            selector: null,
-                            objectName: 'legend',
-                            properties: {
-                                show: show,
-                                position: LegendPosition[this.legend.getOrientation()],
-                                showTitle: showTitle,
-                                titleText: titleText
-                            }
-                        });
-
-                    }
+                    instances.push({
+                        selector: null,
+                        objectName: 'legend',
+                        properties: {
+                            show: show,
+                            position: LegendPosition[this.legend.getOrientation()],
+                            showTitle: showTitle,
+                            titleText: titleText
+                        }
+                    });
                     break;
 
                 case 'dataPoint':
-                    if (this.data) {
+                    instances.push({
+                        objectName: 'dataPoint',
+                        selector: null,
+                        properties: {
+                            defaultColor: { solid: { color: this.data.defaultDataPointColor || this.colors.getColorByIndex(0).value } }
+                        },
+                    });
+
+                    instances.push({
+                        objectName: 'dataPoint',
+                        selector: null,
+                        properties: {
+                            showAllDataPoints: !!this.data.showAllDataPoints
+                        },
+                    });
+
+                    for (var i = 0; i < this.data.dataPoints.length; i++) {
+                        var dataPoint = this.data.dataPoints[i];
                         instances.push({
                             objectName: 'dataPoint',
-                            selector: null,
+                            displayName: dataPoint.label,
+                            selector: ColorHelper.normalizeSelector(dataPoint.identity.getSelector()),
                             properties: {
-                                defaultColor: { solid: { color: this.data.defaultDataPointColor || this.colors.getColorByIndex(0).value } }
+                                fill: { solid: { color: dataPoint.color } }
                             },
                         });
-
-                        instances.push({
-                            objectName: 'dataPoint',
-                            selector: null,
-                            properties: {
-                                showAllDataPoints: !!this.data.showAllDataPoints
-                            },
-                        });
-
-                        for (var i = 0; i < this.data.dataPoints.length; i++) {
-                            var dataPoint = this.data.dataPoints[i];
-                            instances.push({
-                                objectName: 'dataPoint',
-                                displayName: dataPoint.label,
-                                selector: ColorHelper.normalizeSelector(dataPoint.identity.getSelector()),
-                                properties: {
-                                    fill: { solid: { color: dataPoint.color } }
-                                },
-                            });
-                        }
                     }
                     break;
 
                 case 'dataLabels':
-
-                    //TODO Uncomment in online Developer Tool - Our local repo is not updated?
-                    //var dl = dataLabelUtils.enumerateDataLabels((this.data ? this.data.dataLabelsSettings : dataLabelUtils.getDefaultLabelSettings()), false, true, true);
-                    //instances.push(dl[0]);
-                    //END TODO
-
-                    //TODO Remove in online Developer Tool 
                     var enumeration = new ObjectEnumerationBuilder();
-                    dataLabelUtils.enumerateDataLabels(enumeration, (this.data ? this.data.dataLabelsSettings : dataLabelUtils.getDefaultLabelSettings()), false, true, true);
+                    dataLabelUtils.enumerateDataLabels(enumeration, this.data.dataLabelsSettings, false, true, true);
                     instances.push(enumeration.complete().instances[0]);
-                    //END TODO
-
                     break;
 
                 case 'categoryLabels':
-                    //TODO Uncomment in online Developer Tool - Our local repo is not updated?
-                    //var cl =  dataLabelUtils.enumerateCategoryLabels((this.data ? this.data.dataLabelsSettings: null), false, true);
-                    //instances.push(cl[0]);
-                    //END TODO
-
-                    //TODO Remove in online Developer Tool
                     var enumeration = new ObjectEnumerationBuilder();
-                    dataLabelUtils.enumerateCategoryLabels(enumeration, (this.data ? this.data.dataLabelsSettings : null), false, true);
+                    dataLabelUtils.enumerateCategoryLabels(enumeration, this.data.dataLabelsSettings, false, true);
                     instances.push(enumeration.complete().instances[0]);
-                    //END TODO
-
                     break;
 
                 case 'dataState1':
-                    if (this.data) {
-                        instances.push({
-                            objectName: 'dataState1',
-                            selector: null,
-                            properties: {
-                                dataMin: this.data.dataState1.dataMin,
-                                dataMax: this.data.dataState1.dataMax,
-                                color: this.data.dataState1.color,
-                            },
-                        });
-                    }
+                    instances.push({
+                        objectName: 'dataState1',
+                        selector: null,
+                        properties: {
+                            dataMin: this.data.dataState1.dataMin,
+                            dataMax: this.data.dataState1.dataMax,
+                            color: this.data.dataState1.color,
+                        },
+                    });
                     break;
 
                 case 'dataState2':
-                    if (this.data) {
-                        instances.push({
-                            objectName: 'dataState2',
-                            selector: null,
-                            properties: {
-                                dataMin: this.data.dataState2.dataMin,
-                                dataMax: this.data.dataState2.dataMax,
-                                color: this.data.dataState2.color,
-                            },
-                        });
-                    }
+                    instances.push({
+                        objectName: 'dataState2',
+                        selector: null,
+                        properties: {
+                            dataMin: this.data.dataState2.dataMin,
+                            dataMax: this.data.dataState2.dataMax,
+                            color: this.data.dataState2.color,
+                        },
+                    });
                     break;
 
                 case 'dataState3':
-                    if (this.data) {
-                        instances.push({
-                            objectName: 'dataState3',
-                            selector: null,
-                            properties: {
-                                dataMin: this.data.dataState3.dataMin,
-                                dataMax: this.data.dataState3.dataMax,
-                                color: this.data.dataState3.color,
-                            },
-                        });
-                    }
+                    instances.push({
+                        objectName: 'dataState3',
+                        selector: null,
+                        properties: {
+                            dataMin: this.data.dataState3.dataMin,
+                            dataMax: this.data.dataState3.dataMax,
+                            color: this.data.dataState3.color,
+                        },
+                    });
                     break;
 
                 case 'saturationState':
-                    if (this.data) {
-                        instances.push({
-                            objectName: 'saturationState',
-                            selector: null,
-                            properties: {
-                                dataMin: this.data.saturationState.dataMin,
-                                dataMax: this.data.saturationState.dataMax,
-                            },
-                        });
-                    }
+                    instances.push({
+                        objectName: 'saturationState',
+                        selector: null,
+                        properties: {
+                            dataMin: this.data.saturationState.dataMin,
+                            dataMax: this.data.saturationState.dataMax,
+                        },
+                    });
                     break;
             }
 
