@@ -246,11 +246,11 @@ module powerbi.visuals {
                         },
                         imageData: {
                             displayName: 'Image Data',
-                            type: { text: true }
+                            type: {  }
                         },
                         areasData: {
                             displayName: 'Areas Data',
-                            type: { text: true }
+                            type: {  }
                         },
                         showAllAreas: {
                             displayName: 'Show All Areas',
