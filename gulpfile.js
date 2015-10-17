@@ -325,7 +325,6 @@ gulp.task("build:visuals", function (callback) {
 
 gulp.task("build:projects", function (callback) {
     runSequence(
-        "install:jquery-ui",
         "build:visuals_common",
         "build:visuals_data",
         "build:visuals",
@@ -387,6 +386,7 @@ gulp.task("build:package", function(callback) {
         "copy:package_css_unminified",
         "combine:internal_d_ts",
         "combine:external_d_ts",
+        "replace:references",
         "copy:package_sprite",
         callback);
 });
@@ -427,7 +427,6 @@ gulp.task('build:package_unminified', function (callback) {
 
 gulp.task("build:package_projects", function (callback) {
     runSequence(
-        "install:jquery-ui",
         "build:visuals_common",
         "build:visuals_data",
         "build:visuals",
@@ -459,6 +458,17 @@ gulp.task("combine:external_d_ts", function() {
         destinationPath: "lib"
     });
 });
+
+gulp.task("replace:references", function () {
+    replaceInFile("./lib/powerbi-visuals.d.ts", /\/\/\/\s*<reference path.*\/>\s/g);
+});
+
+function replaceInFile(file, find, replace) {
+    var UTF8 = "utf8";
+    replace = replace || "";
+
+    fs.writeFileSync(file, fs.readFileSync(file, UTF8).replace(find, replace), UTF8);
+}
 
 /**
  * Concatenate given files into one.
@@ -583,29 +593,6 @@ function installExternalDependency(path, fileName, url, callback) {
         }
     });
 } 
-
-/** -------------------------- Download 'jquery-ui.min.js' --------------------------------*/
-gulp.task("install:jquery-ui:js", function(callback) {
-    installExternalDependency(
-        "src/Clients/Externals/ThirdPartyIP/jqueryui/1.11.4",
-        "jquery-ui.min.js",
-        "https://code.jquery.com/ui/1.11.4/jquery-ui.min.js",
-        callback);
-});
-
-/** -------------------------- Download 'jquery-ui.min.css' --------------------------------*/
-gulp.task("install:jquery-ui:css", function(callback) {
-    installExternalDependency(
-        "src/Clients/Externals/ThirdPartyIP/jqueryui/1.11.4",
-        "jquery-ui.min.css",
-        "https://code.jquery.com/ui/1.11.4/themes/black-tie/jquery-ui.min.css",
-        callback);
-});
-
-/** -------------------------- Download 'jquery-ui' --------------------------------*/
-gulp.task("install:jquery-ui", function(callback) {
-    runSequence("install:jquery-ui:js", "install:jquery-ui:css", callback);
-});
 
 /** --------------------------Download 'JASMINE-jquery.js' --------------------------------*/
 gulp.task('install:jasmine', function (callback) {

@@ -301,6 +301,12 @@ module powerbi.visuals.plugins {
         create: () => new samples.AsterPlot()
     };
 
+    export var sunburst: IVisualPlugin = {
+        name: 'sunburst',
+        capabilities: samples.Sunburst.capabilities,
+        create: () => new samples.Sunburst()
+    };
+
     export var owlGauge: IVisualPlugin = {
         name: 'owlGauge',
         watermarkKey: 'gauge',
@@ -314,24 +320,42 @@ module powerbi.visuals.plugins {
         capabilities: samples.StreamGraph.capabilities,
         create: () => new samples.StreamGraph()
     };
+    
+    export var radarChart: IVisualPlugin = {
+        name: 'radarChart',
+        capabilities: samples.RadarChart.capabilities,
+        create: () => new samples.RadarChart()
+    };
+
+    export var dotPlot: IVisualPlugin = {
+        name: 'dotPlot',
+        capabilities: samples.DotPlot.capabilities,
+        create: () => new samples.DotPlot()
+    };
+
+    export var histogram: IVisualPlugin = {
+        name: "histogram",
+        capabilities: Histogram.capabilities,
+        create: () => new Histogram()
+    };
 
     //SQLBI Visuals
     
     export var bulletChartBySQLBI: IVisualPlugin = {
         name: 'bulletChartBySQLBI',
-        capabilities: bulletChartBySQLBICapabilities,
+        capabilities: bulletChartBySQLBI.capabilities,
         create: () => new BulletChartBySQLBI()
     };
 
     export var cardWithStatesBySQLBI: IVisualPlugin = {
         name: 'cardWithStatesBySQLBI',
-        capabilities: cardWithStatesBySQLBICapabilities,
+        capabilities: cardWithStatesBySQLBI.capabilities,
         create: () => new CardWithStatesBySQLBI()
     };
 
     export var synopticPanelBySQLBI: IVisualPlugin = {
         name: 'synopticPanelBySQLBI',
-        capabilities: synopticPanelBySQLBICapabilities,
+        capabilities: synopticPanelBySQLBI.capabilities,
         create: () => new SynopticPanelBySQLBI()
     };
 }

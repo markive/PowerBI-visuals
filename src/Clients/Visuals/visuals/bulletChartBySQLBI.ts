@@ -35,9 +35,10 @@
 module powerbi.visuals {
 
     //Model
-    export interface BulletChartBySQLBIModel {
+    export interface BulletChartBySQLBIData {
         label: string;
         label2: string;
+        showLabel: boolean;
         color: string;
         color2: string;
         states: number[];
@@ -48,8 +49,19 @@ module powerbi.visuals {
         max: number;
         selector: data.Selector;
         toolTipInfo: TooltipDataItem[];
-        //legendData: LegendData;
     }
+
+    export var bulletChartProps = {
+        general: {
+            fill: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'fill' },
+            fill2: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'fill2' },
+        },
+        label: {
+            show: <DataViewObjectPropertyIdentifier>{ objectName: 'label', propertyName: 'show' },
+            text: <DataViewObjectPropertyIdentifier>{ objectName: 'label', propertyName: 'text' },
+            text2: <DataViewObjectPropertyIdentifier>{ objectName: 'label', propertyName: 'text2' }
+        },
+    };
 
     //Visual
     export class BulletChartBySQLBI implements IVisual {
@@ -61,7 +73,25 @@ module powerbi.visuals {
         private svgSubtitle: D3.Selection;
 
         private dataView: DataView;
-        //private legend: ILegend;
+        private data: BulletChartBySQLBIData;
+
+        public static getDefaultData(): BulletChartBySQLBIData {
+            return {
+                color: 'steelblue',
+                color2: 'lightsteelblue',
+                label: 'Actual',
+                label2: '',
+                showLabel: true,
+                states: [],
+                min: 0,
+                max: 100,
+                value: 0,
+                target: 0,
+                comparison: 0,
+                toolTipInfo: [],
+                selector: SelectionId.createNull().getSelector()
+            };
+        }
 
         //Capabilities
         public static capabilities: VisualCapabilities = {
@@ -107,12 +137,12 @@ module powerbi.visuals {
                     displayName: data.createDisplayNameGetter('Visual_General'),
                     properties: {
                         fill: {
-                            type: { fill: { solid: { color: true } } },
-                            displayName: 'Main Color'
+                            displayName: 'Main Color',
+                            type: { fill: { solid: { color: true } } }
                         },
                         fill2: {
-                            type: { fill: { solid: { color: true } } },
-                            displayName: 'Comparison Color'
+                            displayName: 'Comparison Color',
+                            type: { fill: { solid: { color: true } } }
                         },
                     },
                 },
@@ -125,36 +155,15 @@ module powerbi.visuals {
                             type: { bool: true }
                         },
                         text: {
-                            type: { text: true },
-                            displayName: 'Text'
+                            displayName: 'Text',
+                            type: { text: true }
                         },
                         text2: {
-                            type: { text: true },
-                            displayName: 'Category'
+                            displayName: 'Category',
+                            type: { text: true }
                         },
                     },
                 },
-                /*legend: {
-                    displayName: data.createDisplayNameGetter('Visual_Legend'),
-                    properties: {
-                        show: {
-                            displayName: data.createDisplayNameGetter('Visual_Show'),
-                            type: { bool: true }
-                        },
-                        position: {
-                            displayName: data.createDisplayNameGetter('Visual_LegendPosition'),
-                            type: { formatting: { legendPosition: true } }
-                        },
-                        showTitle: {
-                            displayName: data.createDisplayNameGetter('Visual_LegendShowTitle'),
-                            type: { bool: true }
-                        },
-                        titleText: {
-                            displayName: data.createDisplayNameGetter('Visual_LegendTitleText'),
-                            type: { text: true }
-                        }
-                    }
-                },*/
             },
             dataViewMappings: [{
                 conditions: [
@@ -199,95 +208,94 @@ module powerbi.visuals {
                 .append('text')
                 .attr('dy', '1em')
                 .classed('subtitle', true);
-
-            //this.legend = createLegend(options.element, false, null);
         }
 
         //Convert the dataview into its view model
-        public static converter(dataView: DataView): BulletChartBySQLBIModel {
-            var viewModel: BulletChartBySQLBIModel = {
-                color: BulletChartBySQLBI.getFieldFill(dataView, 'general', 'fill', 'steelblue').solid.color,
-                color2: BulletChartBySQLBI.getFieldFill(dataView, 'general', 'fill2', 'lightsteelblue').solid.color,
-                label: BulletChartBySQLBI.getFieldText(dataView, 'label', 'text', 'Actual'),
-                label2: BulletChartBySQLBI.getFieldText(dataView, 'label', 'text2'),
-                states: [],
-                min: 0,
-                max: 100,
-                value: 0, 
-                target: 0,
-                comparison: 0,
-                toolTipInfo: [],
-                selector: SelectionId.createNull().getSelector(),
-                //legendData: { title: "", dataPoints: [] }
-            };
+        public static converter(dataView: DataView): BulletChartBySQLBIData {
 
-            var toolTipItems = [];
+            var data: BulletChartBySQLBIData = BulletChartBySQLBI.getDefaultData();
+            
+            if (dataView.categorical) {
 
-            if (dataView && dataView.categorical && dataView.categorical.values && dataView.metadata && dataView.metadata.columns) {
-                var values = dataView.categorical.values;
-                var metadataColumns = dataView.metadata.columns;
+                if (dataView.metadata) {
+                    var objects = dataView.metadata.objects;
 
-                for (var i = 0; i < values.length; i++) {
-                    
-                    var col = metadataColumns[i];
-                    var value = values[i].values[0] || 0;
-                    if (col && col.roles) {
-
-                        var pushToTooltips = false;
-
-                        if (col.roles['Y']) {
-                            viewModel.value = value;
-                            pushToTooltips = true;
-                        } else if (col.roles['MinValue']) {
-                            viewModel.min = value;
-                        } else if (col.roles['MaxValue']) {
-                            viewModel.max = value;
-                        } else if (col.roles['TargetValue']) {
-                            viewModel.target = value;
-                            pushToTooltips = true;
-                        } else if (col.roles['ComparisonValue']) {
-                            viewModel.comparison = value;
-                            pushToTooltips = true;
-                        } else if (col.roles['QualitativeState1Value'] || col.roles['QualitativeState2Value'] || col.roles['QualitativeState3Value']) {
-                            if (value)
-                                viewModel.states.push(value);
-                        }
-
-                        if (value && pushToTooltips)
-                            toolTipItems.push({ value: value, metadata: values[i] });
+                    if (objects) {
+                        data.color = DataViewObjects.getFillColor(objects, bulletChartProps.general.fill, data.color);
+                        data.color2 = DataViewObjects.getFillColor(objects, bulletChartProps.general.fill2, data.color2);
+                        data.label = DataViewObjects.getValue(objects, bulletChartProps.label.text, data.label);
+                        data.label2 = DataViewObjects.getValue(objects, bulletChartProps.label.text2, data.label2);
+                        data.showLabel = DataViewObjects.getValue(objects, bulletChartProps.label.show, data.showLabel);
                     }
-                }
 
-                if (toolTipItems.length > 0) {
-                    viewModel.toolTipInfo = TooltipBuilder.createTooltipInfo({
-                        objectName: 'general',
-                        propertyName: 'formatString',
-                    }, null, null, null, null, toolTipItems);
+                    var toolTipItems = [];
+
+                    var values = dataView.categorical.values;
+
+                    if (values && dataView.metadata.columns) {
+                        for (var i = 0; i < values.length; i++) {
+
+                            var col = dataView.metadata.columns[i];
+                            var value = values[i].values[0] || 0;
+                            if (col && col.roles) {
+
+                                var pushToTooltips = false;
+
+                                if (col.roles['Y']) {
+                                    data.value = value;
+                                    pushToTooltips = true;
+                                } else if (col.roles['MinValue']) {
+                                    data.min = value;
+                                } else if (col.roles['MaxValue']) {
+                                    data.max = value;
+                                } else if (col.roles['TargetValue']) {
+                                    data.target = value;
+                                    pushToTooltips = true;
+                                } else if (col.roles['ComparisonValue']) {
+                                    data.comparison = value;
+                                    pushToTooltips = true;
+                                } else if (col.roles['QualitativeState1Value'] || col.roles['QualitativeState2Value'] || col.roles['QualitativeState3Value']) {
+                                    if (value)
+                                        data.states.push(value);
+                                }
+
+                                if (value && pushToTooltips)
+                                    toolTipItems.push({ value: value, metadata: values[i] });
+                            }
+                        }
+                    }
+
+                    if (toolTipItems.length > 0) {
+                        data.toolTipInfo = TooltipBuilder.createTooltipInfo({
+                            objectName: 'general',
+                            propertyName: 'formatString',
+                        }, null, null, null, null, toolTipItems);
+                    }
                 }
             }
 
-            return viewModel;
+            return data;
         }
 
        //Drawing the visual
         public update(options: VisualUpdateOptions) {
-            if (!options.dataViews && !options.dataViews[0]) return;
+            if (!options.dataViews || !options.dataViews[0]) return;
             var dataView = this.dataView = options.dataViews[0];
             var viewport = options.viewport;
-            var viewModel: BulletChartBySQLBIModel = BulletChartBySQLBI.converter(dataView);
 
-            var maxValue = Math.max(viewModel.target, viewModel.value, viewModel.comparison, viewModel.max);
-            if (viewModel.states.length === 0)
-                viewModel.states = [Math.ceil(maxValue) / 3, (Math.ceil(maxValue) / 3) * 2, Math.ceil(maxValue)];
+            this.data = BulletChartBySQLBI.converter(dataView);
+
+            var maxValue = Math.max(this.data.target, this.data.value, this.data.comparison, this.data.max);
+            if (this.data.states.length === 0)
+                this.data.states = [Math.ceil(maxValue) / 3, (Math.ceil(maxValue) / 3) * 2, Math.ceil(maxValue)];
             
-            var sortedRanges = viewModel.states.slice().sort(d3.descending);
+            var sortedRanges = this.data.states.slice().sort(d3.descending);
             sortedRanges.unshift(maxValue+10);
 
-            var showTitle = BulletChartBySQLBI.getFieldShow(dataView, 'label', true);
-            var titleWidth = TextMeasurementService.measureSvgTextWidth({ fontFamily: 'tahoma', fontSize: '16px', text: viewModel.label });
-            var showSubtitle = (viewModel.label2.length > 0);
-            var subtitleWidth = TextMeasurementService.measureSvgTextWidth({ fontFamily: 'tahoma', fontSize: '12px', text: viewModel.label2 });
-            var labelWidth = (showTitle ? Math.max(titleWidth, subtitleWidth) : 0);
+            var titleWidth = TextMeasurementService.measureSvgTextWidth({ fontFamily: 'tahoma', fontSize: '16px', text: this.data.label });
+            var showSubtitle = (this.data.label2.length > 0);
+            var subtitleWidth = TextMeasurementService.measureSvgTextWidth({ fontFamily: 'tahoma', fontSize: '12px', text: this.data.label2 });
+            var labelWidth = (this.data.showLabel ? Math.max(titleWidth, subtitleWidth) : 0);
 
             var height = 25;
             var width = viewport.width - 5;
@@ -298,18 +306,18 @@ module powerbi.visuals {
                     'width': viewport.width
                 });
 
-            if (showTitle) {
+            if (this.data.showLabel) {
                 this.svgTitle
                     .style('display', 'block')
                     .attr('transform', 'translate(-10,' + ((height / 2) + (showSubtitle ? 0 : 5)) + ')')
-                    .text(viewModel.label);
+                    .text(this.data.label);
                 this.svgBullet.attr('transform', 'translate(' + (labelWidth + 30) + ',5)');
 
                 if (showSubtitle) {
                     this.svgSubtitle
                         .style('display', 'block')
                         .attr('transform', 'translate(-10,' + ((height / 2) + 1) + ')')
-                        .text(viewModel.label2);
+                        .text(this.data.label2);
                 } else {
                     this.svgSubtitle.style('display', 'none');
                 }
@@ -322,7 +330,7 @@ module powerbi.visuals {
 
             //Scale on X-axis
             var scale = d3.scale.linear()
-                .domain([0, Math.max(sortedRanges[0], viewModel.target, viewModel.value)])
+                .domain([0, Math.max(sortedRanges[0], this.data.target, this.data.value)])
                 .range([0, width]);
 
             //Ranges
@@ -340,14 +348,14 @@ module powerbi.visuals {
             
             //Comparison measure
             this.svgBullet.selectAll('rect.measure').remove();
-            if (viewModel.comparison > 0) {
+            if (this.data.comparison > 0) {
                 var comparison = this.svgBullet
                     .append('rect')
                     .classed('measure', true)
-                    .style('fill', viewModel.color2);
+                    .style('fill', this.data.color2);
 
                 comparison
-                    .attr('width', scale(viewModel.comparison))
+                    .attr('width', scale(this.data.comparison))
                     .attr('height', height / 3)
                     .attr('x', 0)
                     .attr('y', height / 3);
@@ -357,10 +365,10 @@ module powerbi.visuals {
             var measure = this.svgBullet
                 .append('rect')
                 .classed('measure', true)
-                .style('fill', viewModel.color);
+                .style('fill', this.data.color);
 
             measure
-                .attr('width', scale(viewModel.value))
+                .attr('width', scale(this.data.value))
                 .attr('height', height / 3)
                 .attr('x', 0)
                 .attr('y', height / 3);
@@ -372,8 +380,8 @@ module powerbi.visuals {
                 .classed('marker', true);
 
             marker
-                .attr('x1', scale(viewModel.target))
-                .attr('x2', scale(viewModel.target))
+                .attr('x1', scale(this.data.target))
+                .attr('x2', scale(this.data.target))
                 .attr('y1', height / 6)
                 .attr('y2', height * 5 / 6);
 
@@ -427,93 +435,51 @@ module powerbi.visuals {
                 .style('opacity', 1e-6)
                 .remove();
 
-            TooltipManager.addTooltip(this.svgBullet, (tooltipEvent: TooltipEvent) => viewModel.toolTipInfo);
+            TooltipManager.addTooltip(this.svgBullet, (tooltipEvent: TooltipEvent) => this.data.toolTipInfo);
         } 
 
         //Make visual properties available in the property pane in Power BI
-        public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[] {
-            var instances: VisualObjectInstance[] = [];
-            var dataView = this.dataView;
+        public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
+            var enumeration = new ObjectEnumerationBuilder();
+
+            if (!this.data)
+                this.data = BulletChartBySQLBI.getDefaultData();
+
             switch (options.objectName) {
                 case 'general':
-                    var general: VisualObjectInstance = {
+                    enumeration.pushInstance({
                         objectName: 'general',
                         displayName: 'General',
                         selector: null,
                         properties: {
-                            fill: BulletChartBySQLBI.getFieldFill(dataView, 'general', 'fill', 'steelblue'),
-                            fill2: BulletChartBySQLBI.getFieldFill(dataView, 'general', 'fill2', 'lightsteelblue')
+                            fill: this.data.color,
+                            fill2: this.data.color2
                         }
-                    };
-                    instances.push(general);
+                    });
                     break;
 
                 case 'label':
-                    var label: VisualObjectInstance = {
+                    enumeration.pushInstance({
                         objectName: 'label',
                         displayName: 'Label',
                         selector: null,
                         properties: {
-                            show: BulletChartBySQLBI.getFieldShow(dataView, 'label'),
-                            text: BulletChartBySQLBI.getFieldText(dataView, 'label', 'text', 'Actual'),
-                            text2: BulletChartBySQLBI.getFieldText(dataView, 'label', 'text2')
+                            show: this.data.showLabel,
+                            text: this.data.label,
+                            text2: this.data.label2
                         }
-                    };
-                    instances.push(label);
+                    });
                     break;
 
             }
 
-            return instances;
+            return enumeration.complete();
         }
 
         //Free up resources
         public destroy(): void {
             this.svg = null;
             this.svgTitle = this.svgSubtitle = this.svgBullet = null;
-        }
-
-        //Properties
-        private static getFieldFill(dataView: DataView, field:string, property:string, defaultValue: string): Fill {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var f = objects[field];
-                    if (f) {
-                        var fill = <Fill>f[property];
-                        if (fill)
-                            return fill;
-                    }
-                }
-            }
-            return { solid: { color: defaultValue } };
-        }
-  
-        private static getFieldText(dataView: DataView, field: string, property: string = 'text', defaultValue: string = ''): string {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var f = objects[field];
-                    if (f) {
-                        var text = <string>f[property];
-                        if (text)
-                            return text;
-                    }
-                }
-            }
-            return defaultValue;
-        }
-
-        private static getFieldShow(dataView: DataView, field: string, defaultValue: boolean = true): boolean {
-            if (dataView) {
-                var objects = dataView.metadata.objects;
-                if (objects) {
-                    var f = objects[field];
-                    if (f) 
-                        return <boolean>f['show'];
-                }
-            }
-            return defaultValue;
         }
     }
 }

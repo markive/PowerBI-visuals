@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  Card With States By SQLBI
  *
  *  Power BI Visualizations
@@ -29,6 +29,8 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi.visuals {
+    import ClassAndSelector = jsCommon.CssConstants.ClassAndSelector;
+    
     export interface CardWithStatesBySQLBIStyle {
         card: {
             maxFontSize: number;
@@ -269,7 +271,6 @@ module powerbi.visuals {
         }
 
         public init(options: VisualInitOptions) {
-            
             this.animationOptions = options.animation;
             var element = options.element;
 
@@ -280,15 +281,15 @@ module powerbi.visuals {
             this.style = options.style;
 
             this.updateViewportProperties();
-
             
             svg.attr('class', CardWithStatesBySQLBI.cardClassName);
             this.labelContext = svg.append('g');
         }
 
        
-        public onDataChanged(options: VisualDataChangedOptions): void {
-      
+        public update(options: VisualUpdateOptions): void {
+			this.updateViewport(options.viewport);
+	  
             //Default settings for reset to default
             this.cardFormatSetting = this.getDefaultFormatSettings();
 
@@ -353,10 +354,9 @@ module powerbi.visuals {
             this.updateInternal(value, true /* suppressAnimations */, true /* forceUpdate */);
         }
 
-        public onResizing(viewport: IViewport): void {
+        public updateViewport(viewport: IViewport): void {
             this.currentViewport = viewport;
             this.updateViewportProperties();
-            this.updateInternal(this.value, true /* suppressAnimations */, true /* forceUpdate */);
         }
 
         private updateViewportProperties() {
@@ -502,7 +502,7 @@ module powerbi.visuals {
                     color: CardWithStatesBySQLBI.DefaultStyle.label.color,
                     text: ''
                 },
-                labelSettings: dataLabelUtils.getDefaultLabelSettings(true, CardWithStatesBySQLBI.DefaultStyle.value.color, 0),
+                labelSettings: dataLabelUtils.getDefaultLabelSettings(true, CardWithStatesBySQLBI.DefaultStyle.value.color),
                 dataState1: {
                     color: '#FD625E', //Red
                     dataMin: -Infinity,

@@ -2,9 +2,6 @@
  *  Synoptic Panel by SQLBI
  *  Draw custom areas over a bitmap image and get all the necessary coordinates with our free tool at http://synoptic.design
  *
- *  Known issues: 
- *  - Map image and Areas json file are not saved between sessions 
- *
  *  Power BI Visualizations
  *
  *  Copyright (c) SQLBI
@@ -246,11 +243,11 @@ module powerbi.visuals {
                         },
                         imageData: {
                             displayName: 'Image Data',
-                            type: {  }
+                            type: { text: true }
                         },
                         areasData: {
                             displayName: 'Areas Data',
-                            type: {  }
+                            type: { text: true }
                         },
                         showAllAreas: {
                             displayName: 'Show All Areas',
@@ -483,7 +480,6 @@ module powerbi.visuals {
         }
 
         //Convert the dataview into its view model
-
         public static converter(dataView: DataView, colors: IDataColorPalette, viewport?: IViewport): SynopticPanelBySQLBIData {
 
             var data: SynopticPanelBySQLBIData = SynopticPanelBySQLBI.getDefaultData();
@@ -547,11 +543,12 @@ module powerbi.visuals {
 
         public onViewModeChanged(viewMode: ViewMode): void {
             this.inEditingMode = (viewMode === ViewMode.Edit);
+            this.loader.toggle(this.inEditingMode);
         }
 
         //Drawing the visual
         public update(options: VisualUpdateOptions) {
-            if (!options.dataViews && !options.dataViews[0]) return;
+            if (!options.dataViews || !options.dataViews[0]) return;
 
             this.inEditingMode = (this.host.getViewMode() === ViewMode.Edit);
   
@@ -769,6 +766,7 @@ module powerbi.visuals {
 
         private autoTextColor(backColor) {
 
+            // NOTE: Consider jsCommon.Color.parseColorString()
             var hexToRGB = function (hex) {
                 var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
                 return result ? {
@@ -803,28 +801,32 @@ module powerbi.visuals {
         }
 
         private persistGeneralData(): void {
-
-            this.host.persistProperties([{
-                objectName: 'general',
-                selector: null,
-                properties: {
-                    imageData: this.data.imageData,
-                    areasData: this.data.areasData,
-                    showAllAreas: this.data.showAllAreas
-                },
-            }]);
+			var properties: any = {};
+			if (this.data.imageData != null)
+				properties.imageData = powerbi.data.SQExprBuilder.text(this.data.imageData);
+				
+			if (this.data.areasData != null)
+				properties.areasData = powerbi.data.SQExprBuilder.text(this.data.areasData);
+			
+            this.host.persistProperties({
+				merge: [{
+	                objectName: 'general',
+	                selector: null,
+	                properties: properties,
+	            }]
+			});
         }
 
         //Make visual properties available in the property pane in Power BI
-        public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[]{
-
+        public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
+            var enumeration = new ObjectEnumerationBuilder();
+            
             if (!this.data)
                 this.data = SynopticPanelBySQLBI.getDefaultData();
 
-            var instances: VisualObjectInstance[] = [];
             switch (options.objectName) {
                 case 'general':
-                    instances.push({
+                    enumeration.pushInstance({
                         objectName: 'general',
                         selector: null,
                         properties: {
@@ -838,11 +840,11 @@ module powerbi.visuals {
                 case 'legend':
                     var legendObjectProperties: DataViewObjects = { legend: this.data.legendObjectProperties };
                         
-                    var  show = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.show, this.legend.isVisible());
+                    var show = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.show, this.legend.isVisible());
                     var showTitle = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.showTitle, true);
                     var titleText = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.titleText, this.data.legendData.title);
 
-                    instances.push({
+                    enumeration.pushInstance({
                         selector: null,
                         objectName: 'legend',
                         properties: {
@@ -855,7 +857,7 @@ module powerbi.visuals {
                     break;
 
                 case 'dataPoint':
-                    instances.push({
+                    enumeration.pushInstance({
                         objectName: 'dataPoint',
                         selector: null,
                         properties: {
@@ -863,7 +865,7 @@ module powerbi.visuals {
                         },
                     });
 
-                    instances.push({
+                    enumeration.pushInstance({
                         objectName: 'dataPoint',
                         selector: null,
                         properties: {
@@ -873,7 +875,7 @@ module powerbi.visuals {
 
                     for (var i = 0; i < this.data.dataPoints.length; i++) {
                         var dataPoint = this.data.dataPoints[i];
-                        instances.push({
+                        enumeration.pushInstance({
                             objectName: 'dataPoint',
                             displayName: dataPoint.label,
                             selector: ColorHelper.normalizeSelector(dataPoint.identity.getSelector()),
@@ -885,19 +887,23 @@ module powerbi.visuals {
                     break;
 
                 case 'dataLabels':
-                    var enumeration = new ObjectEnumerationBuilder();
-                    dataLabelUtils.enumerateDataLabels(enumeration, this.data.dataLabelsSettings, false, true, true);
-                    instances.push(enumeration.complete().instances[0]);
+                    var labelSettingsOptions = {
+                        enumeration: enumeration,
+                        dataLabelsSettings: this.data.dataLabelsSettings,
+                        show: true,
+                        displayUnits: true,
+                        precision: true,
+                        position: false,
+                    };
+                    dataLabelUtils.enumerateDataLabels(labelSettingsOptions);
                     break;
 
                 case 'categoryLabels':
-                    var enumeration = new ObjectEnumerationBuilder();
                     dataLabelUtils.enumerateCategoryLabels(enumeration, this.data.dataLabelsSettings, false, true);
-                    instances.push(enumeration.complete().instances[0]);
                     break;
 
                 case 'dataState1':
-                    instances.push({
+                    enumeration.pushInstance({
                         objectName: 'dataState1',
                         selector: null,
                         properties: {
@@ -909,7 +915,7 @@ module powerbi.visuals {
                     break;
 
                 case 'dataState2':
-                    instances.push({
+                    enumeration.pushInstance({
                         objectName: 'dataState2',
                         selector: null,
                         properties: {
@@ -921,7 +927,7 @@ module powerbi.visuals {
                     break;
 
                 case 'dataState3':
-                    instances.push({
+                    enumeration.pushInstance({
                         objectName: 'dataState3',
                         selector: null,
                         properties: {
@@ -933,7 +939,7 @@ module powerbi.visuals {
                     break;
 
                 case 'saturationState':
-                    instances.push({
+                    enumeration.pushInstance({
                         objectName: 'saturationState',
                         selector: null,
                         properties: {
@@ -944,7 +950,7 @@ module powerbi.visuals {
                     break;
             }
 
-            return instances;
+            return enumeration.complete();
         }
 
         //Free up resources

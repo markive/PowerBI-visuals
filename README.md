@@ -11,15 +11,15 @@ The Synoptic Panel connects areas in a picture with attributes in the data model
 
 https://youtu.be/N7ZjAVvYeXM
 
-![alt tag](synopticpanel-screenshot.png)
+![alt tag](src/Clients/Visuals/visuals/images/synopticPanel-StoreScreenshot.png)
 
-![alt tag](synopticpanel-screenshot2.png)
+![alt tag](src/Clients/Visuals/visuals/images/synopticPanel-SeatsScreenshot.png)
 
 - **Bullet Chart by SQLBI** - 1st winner of the Power BI Best Visuals Contest's People Choice Award
 
 Inspired by Stephen Few, here is the Power BI implementation of this beautiful space-saving indicator. It allows you to bind a main measure, a target, and a comparison measure.
 
-![alt tag](bulletchart-screenshot.png)
+![alt tag](src/Clients/Visuals/visuals/images/bulletChart-Screenshot.png)
 
 
 - **Card with States by SQLBI**
@@ -27,7 +27,7 @@ Inspired by Stephen Few, here is the Power BI implementation of this beautiful s
 Based on the Power BI builtin Card, this visual allows you to bind a performance value and define up to 3 states that determine the color of the main label. 
 Plus: the Category Label is now fully customizable.
 
-![alt tag](cardwithstates-screenshot.png)
+![alt tag](src/Clients/Visuals/visuals/images/cardWithStates-Screenshot.png)
 
 
 ## What is included
@@ -36,7 +36,8 @@ Plus: the Category Label is now fully customizable.
 2. Source code of **Synoptic Panel by SQLBI**
 3. Source code of **Bullet Chart by SQLBI**
 4. Source code of **Card with States by SQLBI**
-5. A Playground app to help you try out the existing visuals, and experiment with the ones you have created
+5. [Sample data to use with custom visuals](src/Clients/Visuals/visuals/sampledata/)
+6. A Playground app to help you try out the existing visuals, and experiment with the ones you have created
 
 ## Getting Started
 
