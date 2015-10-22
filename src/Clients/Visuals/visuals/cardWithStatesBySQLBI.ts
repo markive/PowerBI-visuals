@@ -306,7 +306,9 @@ module powerbi.visuals {
                         if (col.roles['Values'] || col.roles['Y']) {
                             value = v;
                             this.metaDataColumn = col;
-                        } else if (col.roles['TargetValue']) {
+                        }
+
+                        if (col.roles['TargetValue']) {
                             this.target = v;             
                         }
                     }
