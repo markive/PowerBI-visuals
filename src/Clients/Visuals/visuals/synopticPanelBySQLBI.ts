@@ -1,6 +1,7 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
  *  Draw custom areas over a bitmap image and get all the necessary coordinates with our free tool at http://synoptic.design
+ *  v0.2.0
  *
  *  Power BI Visualizations
  *
@@ -27,7 +28,8 @@
  *  THE SOFTWARE.
  */
 
-/// <reference path="../_references.ts"/>
+//Remove the first three chars from the line below to make it working with local playground
+//-/// <reference path="../_references.ts"/>
 
 module powerbi.visuals {
     import SelectionManager = utility.SelectionManager;

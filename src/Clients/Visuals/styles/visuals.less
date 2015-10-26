@@ -1869,42 +1869,27 @@ div.ql-toolbar {
 /* SQLBI Visuals Styles */
 
 /* Bullet Chart by SQLBI */
-.bullet { 
-    font: 12px; 
-    font-family: @semiboldFontFamily;
+.bullet { font: 12px; }
+    .bullet .title { font-size: 16px; font-weight:bold; }
+    .bullet .subtitle { fill: #999; font-size:12px }
 
-    .title { font-size: 16px; font-weight:bold; }
-    .subtitle { fill: #999; font-size:12px }
+    .bullet .marker { stroke: #000; stroke-width: 2px; z-index:999}
 
-    .marker { stroke: #000; stroke-width: 2px; z-index:999}
+    .bullet .tick line { stroke: #666; stroke-width: .5px; }
+    .bullet .tick text {font-size:9px}
 
-    .tick line { stroke: #666; stroke-width: .5px; }
-    .tick text {font-size:9px}
-
-    .range.s0 { fill: #f2f2f2; }
-    .range.s1 { fill: #eee; }
-    .range.s2 { fill: #ddd; }
-    .range.s3 { fill: #ccc; } 
-} 
+    .bullet .range.s0 { fill: #f2f2f2; }
+    .bullet .range.s1 { fill: #eee; }
+    .bullet .range.s2 { fill: #ddd; }
+    .bullet .range.s3 { fill: #ccc; } 
 
 /* Card With Status by SQLBI */
 .cardWithStatus {}
 
 /* Synoptic Panel by SQLBI */
-.synopticPanel {
-     polygon { mix-blend-mode: multiply; }
-     .label { font-size:11px }
-}
-
-.synopticLoader { 
-
-    display:none; position:absolute; top:0; right:0; width:250px; z-index: 999; background: #fff;
-   
-    .file { visibility:hidden; height:0; width:0}
-    button {    
-         padding:0 5px !important; margin:0 0 0 15px; background:none; border:0; font-weight: normal !important; 
-         font-size: 12px; text-transform: uppercase; color: #595959; vertical-align: middle;
-        
-        svg { vertical-align:middle; display:inline-block; margin:0 1px 0 0; }
-    }
-}
+.synopticPanel .label { font-size:11px }
+.synopticLoader { display:none; position:absolute; top:0; right:0; width:250px; z-index: 999; background: #fff; }
+    .synopticLoader .file { visibility:hidden; height:0; width:0}
+    .synopticLoader button { padding:0 5px !important; margin:0 0 0 15px; background:none; border:0; font-weight: normal !important; 
+         font-size: 12px; text-transform: uppercase; color: #595959; vertical-align: middle; }
+        .synopticLoader button svg { vertical-align:middle; display:inline-block; margin:0 1px 0 0; }
