@@ -1888,8 +1888,26 @@ div.ql-toolbar {
 
 /* Synoptic Panel by SQLBI */
 .synopticPanel .label { font-size:11px }
-.synopticLoader { display:none; position:absolute; top:0; right:0; width:250px; z-index: 999; background: #fff; }
-    .synopticLoader .file { visibility:hidden; height:0; width:0}
-    .synopticLoader button { padding:0 5px !important; margin:0 0 0 15px; background:none; border:0; font-weight: normal !important; 
-         font-size: 12px; text-transform: uppercase; color: #595959; vertical-align: middle; }
-        .synopticLoader button svg { vertical-align:middle; display:inline-block; margin:0 1px 0 0; }
+.synopticToolbar {  }
+    .synopticToolbar .powerbi-spinner { position: absolute; left: 50%; margin-left: -18px; top: 50%; margin-top: -10px;}
+    .synopticToolbar .gallery-list {display:none; max-width:400px}
+        .synopticToolbar .gallery-list ul {padding:0; margin:10px 0 0 0; overflow-y:auto; height:250px}
+        .synopticToolbar .gallery-list li {list-style:none; float:left; margin:5px; padding:5px; width:114px; text-align:center  }
+            
+            .synopticToolbar .gallery-list li a, .synopticToolbar .gallery-list li a:active, .synopticToolbar .gallery-list li a:visited {color:#fff; text-decoration:none;}
+            .synopticToolbar .gallery-list li a:hover {color:#f2c80e}
+
+           .synopticToolbar .gallery-list li .thumbnail_container {background:#fff; border:3px solid #fff; padding:5px; width:100px; margin:0 0 3px 0}
+            .synopticToolbar .gallery-list li .thumbnail {  background:#fff; height:60px }
+
+                .synopticToolbar .gallery-list li a:hover .thumbnail_container, .synopticToolbar .gallery-list li .thumbnail_container:hover { border:3px solid #f2c80e;  } 
+
+            .synopticToolbar .gallery-list li .ellipsis { text-overflow: ellipsis;  white-space: nowrap; overflow: hidden; }
+
+    .synopticToolbar .file { visibility:hidden; height:1px; width:1px; }
+    .synopticToolbar button { margin:0 0 0 10px; padding:0 7px 0 5px !important; background:none; border:0; font-weight: normal !important; 
+          color: #fff; vertical-align: middle; font-size:14px; line-height:28px }
+        .synopticToolbar button:first-child {margin-left:0}
+        .synopticToolbar button svg { display:inline-block; margin:5px 2px 0 0; vertical-align: top; }
+            .synopticToolbar button:hover, .synopticToolbar button.active {background:#f2c80e; color:#000}
+            .synopticToolbar button:hover path, .synopticToolbar button.active path, .synopticToolbar button:hover rect, .synopticToolbar button.active rect {fill:#000}
