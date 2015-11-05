@@ -2,7 +2,7 @@
  *  Synoptic Panel by SQLBI
  *  Draw custom areas over a bitmap image and get all the necessary coordinates with our free tool at https://synoptic.design
  *  Known issue: you can't change datapoint colors when you don't have a match between areas name and legend, but details
- *  v0.3.0
+ *  v0.3.1
  *
  *  Power BI Visualizations
  *
@@ -943,7 +943,7 @@ module powerbi.visuals {
                                 labelItalic = true;
                             }
 
-                            if (found) {
+                            if (found && (this.data.dataLabelsSettings.show || this.data.dataLabelsSettings.showCategory)) {
                                 labelItalic = false;
 
                                 if (this.data.dataLabelsSettings.show) {
