@@ -2,7 +2,7 @@
  *  Synoptic Panel by SQLBI
  *  Draw custom areas over a bitmap image and get all the necessary coordinates with our free tool at https://synoptic.design
  *  Known issue: you can't change datapoint colors when you don't have a match between areas name and legend, but details
- *  v0.3.1
+ *  v0.3.2
  *
  *  Power BI Visualizations
  *
@@ -876,7 +876,8 @@ module powerbi.visuals {
                                     }
                                 }
 
-                                opacity = Math.min(SynopticPanelBySQLBI.BaseOpacity, (dataPoint.saturationMeasure / ((maxSaturation - minSaturation) / 100) / 100) * SynopticPanelBySQLBI.BaseOpacity);
+
+                                opacity = Math.min(SynopticPanelBySQLBI.BaseOpacity, ((dataPoint.saturationMeasure - minSaturation) / ((maxSaturation - minSaturation) / SynopticPanelBySQLBI.BaseOpacity)));
 
                             } else if (dataPoint.stateMeasure) {
 
