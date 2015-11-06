@@ -2,7 +2,7 @@
  *  Synoptic Panel by SQLBI
  *  Draw custom areas over a bitmap image and get all the necessary coordinates with our free tool at https://synoptic.design
  *  Known issue: you can't change datapoint colors when you don't have a match between areas name and legend, but details
- *  v0.3.2
+ *  v0.3.3
  *
  *  Power BI Visualizations
  *
@@ -930,18 +930,16 @@ module powerbi.visuals {
                             var polyWidth: number = (maxX - minX);
                             var polyHeight: number = (maxY - minY);
                             var padding: number = 6;
-                            var rotateLow: number = 4;
-                            var rotateHigh: number = 40;
-                            var rotateText: boolean = (this.data.showAreasLabels || this.data.dataLabelsSettings.showCategory) && (polyHeight > polyWidth && polyWidth < rotateHigh);
-                            
+      
                             var labelText;
                             var labelItalic = false;
+                            var wrap = false;
 
                             if (this.data.showAreasLabels) {
 
-                                if (area.name.length < rotateLow) rotateText = false;
-                                labelText = dataLabelUtils.getLabelFormattedText(area.name, (rotateText ? polyHeight : polyWidth) - padding);
+                                labelText = area.name; //dataLabelUtils.getLabelFormattedText(area.name, polyWidth - (padding * 2));
                                 labelItalic = true;
+                                wrap = true;
                             }
 
                             if (found && (this.data.dataLabelsSettings.show || this.data.dataLabelsSettings.showCategory)) {
@@ -953,29 +951,36 @@ module powerbi.visuals {
 
                                     var measureFormatter = measureFormattersCache.getOrCreate(dataPoint.labelFormatString, this.data.dataLabelsSettings, alternativeScale);
 
-                                    labelText = dataLabelUtils.getLabelFormattedText(dataPoint.measure, (rotateText ? polyHeight : polyWidth) - padding, dataPoint.labelFormatString, measureFormatter);
+                                    labelText = dataLabelUtils.getLabelFormattedText(dataPoint.measure, polyWidth - (padding * 2), dataPoint.labelFormatString, measureFormatter);
 
                                 } else {
-                                    if (dataPoint.label.length < rotateLow) rotateText = false;
-                                    labelText = dataLabelUtils.getLabelFormattedText(dataPoint.label, (rotateText ? polyHeight : polyWidth) - padding);
+                                    labelText = dataPoint.label; //dataLabelUtils.getLabelFormattedText(dataPoint.label, polyWidth - (padding * 2));
+                                    wrap = true;
 
                                 }
                             }
 
-                            var labelWidth = TextMeasurementService.measureSvgTextWidth({ fontFamily: dataLabelUtils.LabelTextProperties.fontFamily, fontSize: '11px', text: labelText });
-
-                            var l = g.append('text')
-                                .attr('x', minX + (rotateText ? (polyWidth / 2) : ((polyWidth - labelWidth) / 2)))
-                                .attr('y', minY + (rotateText ? ((polyHeight - labelWidth) / 2) : (polyHeight / 2) + 5))
+                            var fontSize = 11;
+                            var lines = (wrap ?
+                                            this.wrapText(labelText, polyWidth - (padding * 2), polyHeight) :
+                                            [[labelText, TextMeasurementService.measureSvgTextWidth({ fontFamily: dataLabelUtils.LabelTextProperties.fontFamily, fontSize: fontSize + 'px', text: labelText })]]);
+                            
+                            var l = g
+                                .append('text')
+                                .attr('y', minY + ((polyHeight - (lines.length * (fontSize + 2)) - 2) / 2) - 2)
+                                .attr('x', minX + (polyWidth / 2))
                                 .attr('fill', this.autoTextColor(color))
-                                .classed('label', true)
-                                .text(labelText);
-
-                            if (rotateText)
-                                l.style('writing-mode', 'tb');
+                                .classed('label', true);
 
                             if (labelItalic)
                                 l.style('font-style', 'italic');
+
+                            for (var i = 0; i < lines.length; i++) {
+                                l.append('tspan')
+                                    .attr('x', minX + ((polyWidth - lines[i][1]) / 2))
+                                    .attr('dy', fontSize + 2)
+                                    .text(lines[i][0]);
+                            }
                         }
                     }
                         
@@ -1013,10 +1018,12 @@ module powerbi.visuals {
             }
         }
 
-        private autoTextColor(backColor) {
+        private autoTextColor(backColor): string {
+
+            return this.shadeBlend(-0.6, backColor, null);
 
             // NOTE: Consider jsCommon.Color.parseColorString()
-            var hexToRGB = function (hex) {
+            /*var hexToRGB = function (hex) {
                 var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
                 return result ? {
                     r: parseInt(result[1], 16),
@@ -1027,7 +1034,52 @@ module powerbi.visuals {
 
             var rgbColor = hexToRGB(backColor);
             var o = Math.round(((rgbColor.r * 299) + (rgbColor.g * 587) + (rgbColor.b * 114)) / 1000);
-            return (o > 125 ? 'black' : 'white');
+            return (o > 125 ? 'black' : 'white');*/
+        }
+
+        //Version 2 Universal - http://stackoverflow.com/questions/5560248/programmatically-lighten-or-darken-a-hex-color-or-rgb-and-blend-colors
+       private shadeBlend(p, c0, c1) {
+            var n = p < 0 ? p * -1 : p, u = Math.round, w = parseInt;
+            if (c0.length > 7) {
+                var f = c0.split(","), t = (c1 ? c1 : p < 0 ? "rgb(0,0,0)" : "rgb(255,255,255)").split(","), R = w(f[0].slice(4)), G = w(f[1]), B = w(f[2]);
+                return "rgb(" + (u((w(t[0].slice(4)) - R) * n) + R) + "," + (u((w(t[1]) - G) * n) + G) + "," + (u((w(t[2]) - B) * n) + B) + ")"
+            } else {
+                var f = w(c0.slice(1), 16), t = w((c1 ? c1 : p < 0 ? "#000000" : "#FFFFFF").slice(1), 16), R1 = f >> 16, G1 = f >> 8 & 0x00FF, B1 = f & 0x0000FF;
+                return "#" + (0x1000000 + (u(((t >> 16) - R1) * n) + R1) * 0x10000 + (u(((t >> 8 & 0x00FF) - G1) * n) + G1) * 0x100 + (u(((t & 0x0000FF) - B1) * n) + B1)).toString(16).slice(1)
+            }
+        }
+
+        private wrapText(text, width, height): any {
+
+            var fontSize = 11;
+            var lines = [];
+            var words = text.split(' ');
+            
+            var lastLine = ["", 0];
+            for (var n = 0; n < words.length; n++) {
+                var word = words[n] + " ";
+                var wordWidth = TextMeasurementService.measureSvgTextWidth({ fontFamily: dataLabelUtils.LabelTextProperties.fontFamily, fontSize: fontSize + 'px', text: word });
+
+                var testLine = lastLine[0] + word;
+                var testWidth = lastLine[1] + wordWidth;
+                if (testWidth > width) {
+                    lines.push(lastLine);
+                    lastLine = [word, wordWidth];
+                } else {
+                    lastLine = [testLine, testWidth];
+                }
+            }
+
+            if (lastLine[1] > width) {
+                lastLine[0] = dataLabelUtils.getLabelFormattedText(lastLine[0], width);
+                lastLine[1] = width;
+            }
+            lines.push(lastLine);
+
+            if ((lines.length * (fontSize + 2) - 2) > height)
+                lines = [[dataLabelUtils.getLabelFormattedText(text, width), width]];
+   
+            return lines;
         }
 
         private renderLegend(): void {
