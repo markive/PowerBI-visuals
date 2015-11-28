@@ -1,6 +1,6 @@
 /*
  *  Card With States By SQLBI
- *  v0.3.0
+ *  v0.4.0
  *
  *  Power BI Visualizations
  *
@@ -654,6 +654,17 @@ module powerbi.visuals {
                 this.cardFormatSettings = this.getDefaultFormatSettings();
 
             switch (options.objectName) {
+                case 'labels':
+                    return [{
+                        objectName: 'labels',
+                        selector: null,
+                        properties: {
+                            color: this.cardFormatSettings.labelSettings.labelColor,
+                            labelDisplayUnits: this.cardFormatSettings.labelSettings.displayUnits,
+                            labelPrecision: this.cardFormatSettings.labelSettings.precision,
+                        },
+                    }];
+
                 case 'cardTitle':
                     return [{
                         objectName: 'cardTitle',
