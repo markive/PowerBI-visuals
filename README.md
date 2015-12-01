@@ -11,6 +11,7 @@ The Synoptic Panel connects areas in a picture with attributes in the data model
 
 **Last updates:**
 
+- Bind maps/areas to your data
 - Import SVG graphics and the component will automatically detect every shape with a custom name
 - Share your maps in the Synoptic Designer Gallery and import directly from the visual
 

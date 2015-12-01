@@ -1,8 +1,7 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
- *  Draw custom areas over a bitmap image and get all the necessary coordinates with our free tool at https://synoptic.design
- *  Known issue: you can't change datapoint colors when you don't have a match between areas name and legend, but details
- *  v0.4.0
+ *  Use designer at https://synoptic.design
+ *  v0.4.1
  *
  *  Power BI Visualizations
  *
@@ -47,6 +46,8 @@ module powerbi.visuals {
         color: string;
         saturationMeasure?: number;
         stateMeasure?: number;
+        mapMeasure?: string;
+        areasMeasure?: string;
     }
 
     export interface SynopticPanelBySQLBIData {
@@ -54,6 +55,7 @@ module powerbi.visuals {
         legendData: LegendData;
         hasHighlights: boolean;
         dataLabelsSettings: VisualDataLabelsSettings;
+        boundMapsAndAreas: any[];
         defaultDataPointColor?: string;
         showAllDataPoints?: boolean;
         legendObjectProperties?: DataViewObject;
@@ -64,6 +66,7 @@ module powerbi.visuals {
         saturationState?: SynopticPanelBySQLBIState;
         imageData?: string;
         areasData?: string;
+        showAllShapes?: boolean;
         showAllAreas?: boolean;
         showAreasLabels?: boolean;
     }
@@ -108,6 +111,7 @@ module powerbi.visuals {
             formatString: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'formatString' },
             imageData: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'imageData' },
             areasData: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'areasData' },
+            showAllShapes: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'showAllShapes' },
             showAllAreas: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'showAllAreas' },
             showAreasLabels: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'showAreasLabels' },
         },
@@ -154,7 +158,8 @@ module powerbi.visuals {
         type: string; //bitmap or svg
         width: number;
         height: number;
-        layers?: SynopticPanelShape[];
+        matched?: SynopticPanelShape[];
+        unmatched?: D3.Selection[];
     }
 
     export interface SynopticPanelShape {
@@ -184,6 +189,8 @@ module powerbi.visuals {
         private legend: ILegend;
         private element: JQuery;
         private toolbar: JQuery;
+        private boundMapsCombo: JQuery;
+        private selectedBoundMapIndex: number;
         private host: IVisualHostServices;
         private selectionManager: SelectionManager;
         private style: IVisualStyle;
@@ -212,6 +219,7 @@ module powerbi.visuals {
                 legendData: { title: '', dataPoints: [] },
                 hasHighlights: false,
                 dataLabelsSettings: dataLabelUtils.getDefaultLabelSettings(),
+                showAllShapes: true,
                 showAllAreas: false,
                 showAreasLabels: false,
                 showAllDataPoints: false,
@@ -238,6 +246,7 @@ module powerbi.visuals {
                     dataMax: 0,
                     inBinding: false
                 },
+                boundMapsAndAreas: []
             };
         }
 
@@ -256,6 +265,14 @@ module powerbi.visuals {
                     name: 'Y',
                     kind: VisualDataRoleKind.Measure,
                     displayName: data.createDisplayNameGetter('Role_DisplayName_Values'),
+                }, {
+                     name: 'MapSeries',
+                     kind: VisualDataRoleKind.Grouping,
+                    displayName: 'Maps',
+                }, {
+                     name: 'AreaSeries',
+                     kind: VisualDataRoleKind.Grouping,
+                    displayName: 'Areas',
                 }, {
                     name: 'State',
                     kind: VisualDataRoleKind.Measure,
@@ -300,25 +317,29 @@ module powerbi.visuals {
             ],
             objects: {
                 general: {
-                    displayName: 'Areas',
+                    displayName: 'Unmatched areas',
                     properties: {
                         formatString: {
                             type: { formatting: { formatString: true } },
                         },
                         imageData: {
-                            displayName: 'Map Image',
+                            displayName: 'Map data',
                             type: { text: true }
                         },
                         areasData: {
-                            displayName: 'Areas',
+                            displayName: 'Areas data',
                             type: { text: true }
                         },
+                        showAllShapes: {
+                            displayName: 'Show',
+                            type: { bool: true }
+                        },
                         showAllAreas: {
-                            displayName: 'All Areas',
+                            displayName: 'Colorize',
                             type: { bool: true }
                         },
                         showAreasLabels: {
-                            displayName: 'Areas Names',
+                            displayName: 'Labels',
                             type: { bool: true }
                         },
                     },
@@ -331,7 +352,7 @@ module powerbi.visuals {
                             type: { fill: { solid: { color: true } } }
                         },
                         showAllDataPoints: {
-                            displayName: 'Multiple Colors',
+                            displayName: 'Multiple colors',
                             type: { bool: true }
                         },
                         fill: {
@@ -341,7 +362,7 @@ module powerbi.visuals {
                     }
                 },
                 saturationState: {
-                    displayName: 'Saturation State',
+                    displayName: 'Saturation state',
                     properties: {
                         dataMin: {
                             displayName: 'Minimum',
@@ -455,8 +476,8 @@ module powerbi.visuals {
 
             dataViewMappings: [{
                 conditions: [
-                    { 'Category': { max: 1 }, 'Series': { max: 1 }, 'Y': { max: 1 }, 'State': { max: 1 }, 'State1Min': { max: 1 }, 'State1Max': { max: 1 }, 'State2Min': { max: 1 }, 'State2Max': { max: 1 }, 'State3Min': { max: 1 }, 'State3Max': { max: 1 }, 'Saturation': { max: 0 }, 'SaturationMin': { max: 0 }, 'SaturationMax': { max: 0 } },
-                    { 'Category': { max: 1 }, 'Series': { max: 1 }, 'Y': { max: 1 }, 'State': { max: 0 }, 'State1Min': { max: 0 }, 'State1Max': { max: 0 }, 'State2Min': { max: 0 }, 'State2Max': { max:0 }, 'State3Min': { max: 0 }, 'State3Max': { max: 0 }, 'Saturation': { max: 1 }, 'SaturationMin': { max: 1 }, 'SaturationMax': { max: 1 } },
+                    { 'Category': { max: 1 }, 'Series': { max: 1 }, 'Y': { max: 1 }, 'MapSeries': { max: 1 }, 'AreaSeries': { max: 1 }, 'State': { max: 1 }, 'State1Min': { max: 1 }, 'State1Max': { max: 1 }, 'State2Min': { max: 1 }, 'State2Max': { max: 1 }, 'State3Min': { max: 1 }, 'State3Max': { max: 1 }, 'Saturation': { max: 0 }, 'SaturationMin': { max: 0 }, 'SaturationMax': { max: 0 } },
+                    { 'Category': { max: 1 }, 'Series': { max: 1 }, 'Y': { max: 1 }, 'MapSeries': { max: 1 }, 'AreaSeries': { max: 1 }, 'State': { max: 0 }, 'State1Min': { max: 0 }, 'State1Max': { max: 0 }, 'State2Min': { max: 0 }, 'State2Max': { max:0 }, 'State3Min': { max: 0 }, 'State3Max': { max: 0 }, 'Saturation': { max: 1 }, 'SaturationMin': { max: 1 }, 'SaturationMax': { max: 1 } },
                 ],
                 categorical: {
                     categories: {
@@ -468,6 +489,8 @@ module powerbi.visuals {
                             by: 'Series',
                             select: [
                                 { bind: { to: 'Y' } },
+                                { bind: { to: 'MapSeries' } },
+                                { bind: { to: 'AreaSeries' } },
                                 { bind: { to: 'State' } },
                                 { bind: { to: 'Saturation' } },
                                 { bind: { to: 'State1Min' } },
@@ -480,7 +503,8 @@ module powerbi.visuals {
                                 { bind: { to: 'SaturationMax' } },
                             ],
                             dataReductionAlgorithm: { top: {} }
-                        }
+                        },
+
                     },
                     rowCount: { preferred: { min: 2 } }
                 }
@@ -509,12 +533,14 @@ module powerbi.visuals {
             this.legend = createLegend(this.element, this.isInteractive, this.interactivityService, true);
             this.galleryRetreiving = false;
             this.gallerySubmissions = {};
+            this.selectedBoundMapIndex = -1;
 
             this.data = {
                 dataPoints: [],
                 legendData: { title: '', dataPoints: [] },
                 hasHighlights: false,
                 dataLabelsSettings: dataLabelUtils.getDefaultLabelSettings(),
+                boundMapsAndAreas: []
             };
 
             this.clearMap();
@@ -596,6 +622,12 @@ module powerbi.visuals {
             if (this.toolbar) this.toolbar.remove();
 
             if (showToolbar) {
+                if (this.data.boundMapsAndAreas.length > 0) {
+                    showToolbar = false;
+                }
+            }
+
+            if (showToolbar) {
 
                 var mapButton = '<span><button class="fileChoose mapChoose" title="Choose a local map image"><svg viewBox="0 0 15 12" width="20" height="16"><g><path fill="#ffffff" d="M4.51,3c-0.222,0 -0.394,0.069 -0.543,0.217c-0.148,0.148 -0.217,0.321 -0.217,0.544c0,0.208 0.069,0.374 0.217,0.521c0.287,0.288 0.759,0.308 1.066,0c0.149,-0.147 0.217,-0.313 0.217,-0.521c0,-0.223 -0.068,-0.396 -0.217,-0.543c-0.148,-0.149 -0.315,-0.218 -0.523,-0.218M4.51,5.25c-0.422,0 -0.783,-0.147 -1.073,-0.437c-0.289,-0.289 -0.437,-0.643 -0.437,-1.052c0,-0.423 0.148,-0.785 0.438,-1.075c0.568,-0.569 1.534,-0.589 2.125,0c0.29,0.291 0.437,0.652 0.437,1.075c0,0.408 -0.147,0.762 -0.437,1.052c-0.29,0.29 -0.644,0.437 -1.053,0.437M3.75,9l7.5,0l0,-2.084l-2.323,-2.221l-2.351,3.296l-1.283,-0.985l-1.543,1.853l0,0.141ZM12,9.75l-9,0l0,-1.163l2.177,-2.615l1.239,0.951l2.402,-3.368l3.182,3.041l0,3.154ZM0.75,11.25l13.5,0l0,-10.5l-13.5,0l0,10.5ZM15,12l-15,0l0,-12l15,0l0,12Z"/></g></svg> Select Map</button><input type="file" class="file image" accept="image/*"></span> ';
 
@@ -640,6 +672,7 @@ module powerbi.visuals {
                             fr.readAsText(file);
 
                         fr.onload = function () {
+                            self.selectedBoundMapIndex = -1;
                             if (isImage) {
                                 self.initialImage = null;
                                 self.data.imageData = fr.result;
@@ -654,9 +687,9 @@ module powerbi.visuals {
                                 self.data.areasData = fr.result;
                             }
                             self.persistData();
-                            self.renderMap();
+                            self.renderMap(importAsData);
 
-                            self.updateToolbarCabilitites();
+                            self.updateToolbarCapabilitites();
                         };
                     }
                 });
@@ -688,14 +721,8 @@ module powerbi.visuals {
                             toolbar.find('.gallery-list').css('opacity', 0.3).append(loader);
                             self.data.areasData = submission.areas;
                         }
-                        /*$.getJSON(areaURL, function (d) {
-                            self.data.areasData = JSON.stringify(d);
-                            self.persistData();
+                        self.selectedBoundMapIndex = -1;
 
-                            self.renderMap();
-                            toggleGallery(false);
-                        });*/
-                        
                         self.persistData();
                         self.renderMap();
                         toggleGallery(false);
@@ -705,7 +732,7 @@ module powerbi.visuals {
                 });
 
                 this.toolbar = toolbar;
-                this.updateToolbarCabilitites();
+                this.updateToolbarCapabilitites();
 
                 this.host.setToolbar(toolbar);
 
@@ -713,9 +740,34 @@ module powerbi.visuals {
 
                 this.host.setToolbar(null);
             }
+
+            this.setboundMapsCombo();
         }
 
-        private updateToolbarCabilitites() {
+        private setboundMapsCombo() {
+            var self = this;
+            if (this.boundMapsCombo) this.boundMapsCombo.remove();
+
+            if (this.data.boundMapsAndAreas.length > 1) {
+                var comboHTML = '<div class="synopticCombo" drag-resize-disabled="true"><select>';
+                for (var ma = 0; ma < this.data.boundMapsAndAreas.length; ma++) {
+                    var map = this.data.boundMapsAndAreas[ma].map
+                    var name = map.split(/[\\/.]/).slice(-2, -1);
+                    var mapName = name[0].replace('_', ' ');
+                    comboHTML += '<option value="' + ma + '"';
+                    if (this.selectedBoundMapIndex === ma) comboHTML += ' selected';
+                    comboHTML += '>' + mapName + '</option>';
+                }
+                comboHTML += '</select></div>';
+                this.boundMapsCombo = $(comboHTML).appendTo(this.element);
+                this.boundMapsCombo.find('select').on('change', function () {
+                    var mapIndex = parseInt($(this).val(), 10);
+                    self.renderBoundMap(mapIndex);
+                });
+            }
+        }
+
+        private updateToolbarCapabilitites() {
             if (this.initialImage && this.initialImage.type === 'svg')
                 this.toolbar.find('.areaChoose').addClass('disabled').attr('disabled', 'disabled');
             else
@@ -763,6 +815,7 @@ module powerbi.visuals {
     
                         data.areasData = DataViewObjects.getValue<string>(objects, synopticPanelProps.general.areasData);
 
+                        data.showAllShapes = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.general.showAllShapes, data.showAllShapes);
                         data.showAllAreas = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.general.showAllAreas, data.showAllAreas);
                         data.showAreasLabels = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.general.showAreasLabels, data.showAreasLabels);
                     }
@@ -771,6 +824,7 @@ module powerbi.visuals {
                 var converter = new SynopticPanelConversion.SynopticPanelConverter(dataView, colors, defaultDataPointColor);
                 converter.convert();
 
+                data.boundMapsAndAreas = converter.mapsAndAreas;
                 data.dataPoints = converter.dataPoints;
                 data.legendData = converter.legendData;
                 data.legendObjectProperties = converter.legendObjectProperties;
@@ -828,75 +882,162 @@ module powerbi.visuals {
                     'width': currentViewport.width
                 });
 
+            if (this.data.boundMapsAndAreas.length > 0) {
+                if (this.selectedBoundMapIndex === -1) {
+                    this.renderBoundMap();
+                    this.setToolbar(this.inEditingMode);
+                    return;
+                }
+            } else {
+                if (this.selectedBoundMapIndex > -1) {
+                    this.clearBoundMap();
+                    this.setToolbar(this.inEditingMode);
+                    return;
+                }
+            }
+
             this.renderMap();
             this.setToolbar(this.inEditingMode);
         }
 
-        private renderMap() {
+        private clearBoundMap() {
+
+            this.renderBoundMap(-1);
+            this.clearMap();
+        }
+
+        private renderBoundMap(index?: number) {
+
+            var mapIndex;
+            if (typeof index !== 'undefined') {
+                mapIndex = index;
+            } else {
+                mapIndex = 0;
+                if (this.data.imageData) {
+                    for (var i = 0; i < this.data.boundMapsAndAreas.length; i++) {
+                        if (this.data.imageData === this.data.boundMapsAndAreas[i].map) {
+                            mapIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+            this.selectedBoundMapIndex = mapIndex;
+
+            this.initialImage = null;
+            this.parsedAreas = null;
+            if (mapIndex === -1) {
+                this.data.imageData = null;
+                this.data.areasData = null;
+            } else {
+                var selectedMap = this.data.boundMapsAndAreas[mapIndex].map;
+                this.data.imageData = selectedMap;
+                this.data.areasData = (this.isSVGFile(selectedMap) ? '1' : this.data.boundMapsAndAreas[mapIndex].areas);
+            }
+            this.persistData();
+            this.renderMap();
+        }
+
+        private renderMap(forceBitmap?: boolean) {
             var self = this;
             var imageData = this.data.imageData;
+            if (typeof forceBitmap === 'undefined')
+                forceBitmap = false;
+
             if (imageData) {
 
                 if (!this.initialImage) {
 
-                    if (imageData.indexOf('<svg ') >= 0) {
+                    if (imageData.indexOf('<svg') >= 0 || (!forceBitmap && this.isSVGFile(imageData))) {
+                        
                         //SVG
-                        var $temp = $('<div>').append(imageData);
-                        var $tempsvg = $temp.find('svg');
+                        var parseSVG = function (xmlData) {
 
-                        var w = parseInt($tempsvg.attr('width'), 10);
-                        var h = parseInt($tempsvg.attr('height'), 10);
-                        if (isNaN(w) || isNaN(h)) {
-                            var viewbox = $tempsvg[0].viewBox.baseVal;
-                            w = viewbox.width;
-                            h = viewbox.height;
-                        }
-                        this.initialImage = {
-                            type: 'svg',
-                            width: w,
-                            height: h,
-                            layers: []
-                        };
+                            var $temp = $('<div>').append(xmlData);
+                            var $tempsvg = $temp.find('svg');
 
-                        this.clearMap($tempsvg[0]);
-
-                        //Extract areas from SVG
-                        var areas = [];
-                        this.svg.selectAll('[id]').each(function (d, i) {
-                               
-                            var el = d3.select(this);
-                            if (this.tagName.toLowerCase() === 'g') {
-                                if (el.selectAll("[id]")[0].length > 0)
-                                    return;
+                            var w = parseInt($tempsvg.attr('width'), 10);
+                            var h = parseInt($tempsvg.attr('height'), 10);
+                            if (isNaN(w) || isNaN(h)) {
+                                var viewbox = $tempsvg[0].viewBox.baseVal;
+                                w = viewbox.width;
+                                h = viewbox.height;
                             }
-                            if (el.classed('excluded')) return;
+                            self.initialImage = {
+                                type: 'svg',
+                                width: w,
+                                height: h,
+                                matched: [],
+                                unmatched: []
+                            };
 
-                            var name = self.getSVGName(this);
-                            if (name === '') return;
+                            self.clearMap($tempsvg[0]);
 
-                            self.initialImage.layers.push({
-                                id: this.id,
-                                style: {
-                                    fill: el.style('fill'),
-                                    fillopacity: el.style('fill-opacity'),
-                                    stroke: el.style('stroke'),
-                                    strokeopacity: el.style('stroke-opacity'),
-                                    strokewidth: el.style('stroke-width')
+                            //Extract areas from SVG
+                            var areas = [];
+                            self.svg.selectAll('[id]').each(function (d, i) {
+
+                                var el = d3.select(this);
+                                if (!self.isRecognizedSVGShape(this.tagName))
+                                    return;
+
+                                if (this.tagName.toLowerCase() === 'g') {
+                                    if (el.selectAll("[id]")[0].length > 0)
+                                        return;
+                                }
+                                if (el.classed('excluded')) return;
+
+                                var name = self.getSVGName(this);
+                                if (name === '') return;
+
+                                self.initialImage.matched.push({
+                                    id: this.id,
+                                    style: {
+                                        fill: el.style('fill'),
+                                        fillopacity: el.style('fill-opacity'),
+                                        stroke: el.style('stroke'),
+                                        strokeopacity: el.style('stroke-opacity'),
+                                        strokewidth: el.style('stroke-width')
+                                    }
+                                });
+
+                                areas.push({
+                                    'name': name,
+                                    'elementId': this.id
+                                });
+                            });
+
+                            self.svg.selectAll(':not([id])').each(function (d, i) {
+                                
+                                var parent = this.parentNode;
+                                if (parent.tagName.toLowerCase() !== 'svg') {
+                                    if (parent.id !== '') return;
+                                }
+
+                                var children = this.children;
+                                if (children.length == 0) {
+                                    var el = d3.select(this);
+                                    self.initialImage.unmatched.push(el);
                                 }
                             });
 
-                            areas.push({
-                                'name': name,
-                                'elementId': this.id
-                            });
-                        });
+                            self.parsedAreas = areas;
+                            self.renderAreas();
+                        };
 
-                        this.parsedAreas = areas;
-                        this.renderAreas();
+                        if (this.isSVGFile(imageData)) {
+                            $.get(imageData, function (d) {
+                               parseSVG(d);
+                           }, 'text');
+
+                        } else {
+                            parseSVG(imageData);
+                        }
 
                     } else {
                         //Bitmap
                         this.clearMap();
+                        this.data.showAllShapes = true;
 
                         $('<img/>').attr('src', imageData).load(function () {
                             self.initialImage = {
@@ -918,6 +1059,17 @@ module powerbi.visuals {
                 }
 
             }
+        }
+
+        private isSVGFile(filename) {
+            var len = filename.length;
+            if (len > 2083) return false;
+            return (filename.lastIndexOf('.svg') === (len - 4));
+        }
+
+        private isRecognizedSVGShape(tag) {
+            var shapes = ['g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polygon', 'polyline', 'text'];
+            return (shapes.indexOf(tag.toLowerCase()) >= 0);
         }
 
         private getSVGName(dom) {
@@ -959,17 +1111,24 @@ module powerbi.visuals {
 
             if (this.initialImage.type === 'svg') {
 
-                for (var i = 0; i < this.initialImage.layers.length; i++) {
-                    var layer = this.initialImage.layers[i];
-                    var el = this.svg.select('#' + layer.id);
-                    if (layer && el) {
-                        el.style('fill', layer.style.fill);
-                        el.style('fill-opacity', layer.style.fillopacity);
-                        el.style('stroke', layer.style.stroke);
-                        el.style('stroke-opacity', layer.style.strokeopacity);
-                        el.style('stroke-width', layer.style.strokewidth);
+                for (var i = 0; i < this.initialImage.matched.length; i++) {
+                    var shape = this.initialImage.matched[i];
+                    var el = this.svg.select('#' + shape.id);
+                    if (shape && el) {
+                        el.style('fill', shape.style.fill);
+                        el.style('fill-opacity', shape.style.fillopacity);
+                        el.style('stroke', shape.style.stroke);
+                        el.style('stroke-opacity', shape.style.strokeopacity);
+                        el.style('stroke-width', shape.style.strokewidth);
+                        el.style('display', '');
                     }
                 } 
+
+                for (var i = 0; i < this.initialImage.unmatched.length; i++) {
+                    var shape = this.initialImage.unmatched[i];
+                    shape.style('display', '');
+                }
+
                 this.svg.selectAll('.label').remove();
             } else {
                 this.svg.selectAll('g.poly').remove();
@@ -1044,14 +1203,23 @@ module powerbi.visuals {
                         }
                     }
 
-                    if (this.data.showAllAreas || found) {
+                    if ((!this.data.showAllAreas || !this.data.showAllShapes) && !found) {
 
+                        if (area.elementId && !this.data.showAllShapes) {
+                            this.svg.select('#' + area.elementId).style('display', 'none');
+                        }
+
+                    } else {
                         var polyRect: SVGRect;
+                        var drawLabel = true;
 
                         var g;
                         if (area.elementId) {
 
                             g = this.svg.select('#' + area.elementId);
+
+                            var isTextShape = (g[0][0].tagName.toLowerCase() === 'text');
+                            drawLabel = !isTextShape;
 
                             g
                                 .data([(found ? dataPoint : area.name)])
@@ -1060,7 +1228,7 @@ module powerbi.visuals {
                                 .style('fill', color)
                                 .style('fill-opacity', opacity)
                                 .style('stroke', color)
-                                .style('stroke-width', (g[0][0].tagName.toLowerCase() === 'text' ? '0' : '2'))
+                                .style('stroke-width', (isTextShape ? '0' : '2'))
                                 .style('stroke-opacity', opacity);
 
                             polyRect = g[0][0].getBBox();
@@ -1102,7 +1270,7 @@ module powerbi.visuals {
                         else
                             TooltipManager.addTooltip(g, (tooltipEvent: TooltipEvent) => [{ displayName: 'Area', value: tooltipEvent.data }]);
 
-                        if (this.data.showAreasLabels || (found && (this.data.dataLabelsSettings.show || this.data.dataLabelsSettings.showCategory))) {
+                        if (drawLabel && ((this.data.showAllAreas && this.data.showAreasLabels) || (found && (this.data.dataLabelsSettings.show || this.data.dataLabelsSettings.showCategory)))) {
 
                             var padding: number = 6;
       
@@ -1140,7 +1308,7 @@ module powerbi.visuals {
                                             this.wrapText(labelText, polyRect.width - (padding * 2), polyRect.height) :
                                             [[labelText, TextMeasurementService.measureSvgTextWidth({ fontFamily: dataLabelUtils.LabelTextProperties.fontFamily, fontSize: fontSize + 'px', text: labelText })]]);
                             
-                            if (g[0][0].tagName.toLowerCase() !== 'g')
+                            if (area.elementId)
                                 g = this.svg;
 
                             var l = g
@@ -1162,6 +1330,13 @@ module powerbi.visuals {
                         }
                     }
                         
+                }
+
+                if (!this.data.showAllShapes) {
+                    for (var i = 0; i < this.initialImage.unmatched.length; i++) {
+                        var shape = this.initialImage.unmatched[i];
+                        shape.style('display', 'none');
+                    }
                 }
 
                 if (this.isInteractive) {
@@ -1283,6 +1458,8 @@ module powerbi.visuals {
             var properties: any = {};
             if (this.data.imageData != null)
                 properties.imageData = powerbi.data.SQExprBuilder.text(this.data.imageData);
+            else 
+                properties.imageData = '';
 
             if (this.data.areasData != null)
                 properties.areasData = powerbi.data.SQExprBuilder.text(this.data.areasData);
@@ -1307,14 +1484,27 @@ module powerbi.visuals {
 
             switch (options.objectName) {
                 case 'general':
+
+                    if (this.initialImage && this.initialImage.type === 'svg') {
+                        enumeration.pushInstance({
+                            objectName: 'general',
+                            selector: null,
+                            properties: {
+                                showAllShapes: this.data.showAllShapes
+                            },
+                        });
+                    }
+
                     enumeration.pushInstance({
                         objectName: 'general',
                         selector: null,
                         properties: {
-                            showAllAreas: this.data.showAllAreas,
-                            showAreasLabels: (this.data.showAllAreas ?  this.data.showAreasLabels : false)
+                            showAllAreas: (this.data.showAllShapes ? this.data.showAllAreas : false),
+                            showAreasLabels: ((this.data.showAllAreas && this.data.showAllShapes) ?  this.data.showAreasLabels : false)
                         },
                     });
+
+                   
 
                     /*for (var i = 0; i < this.data.dataPoints.length; i++) {
                         var dataPoint = this.data.dataPoints[i];
@@ -1468,6 +1658,8 @@ module powerbi.visuals {
             seriesIndex?: number;
             stateMeasure?: number;
             saturationMeasure?: number;
+            mapMeasure?: string;
+            areasMeasure?: string;
         };
 
         interface MeasureAndValue {
@@ -1485,17 +1677,17 @@ module powerbi.visuals {
             private isMultiMeasure: boolean;
             private isSingleMeasure: boolean;
             private seriesCount: number;
-            private categoryIdentities: DataViewScopeIdentity[];
-            private categoryValues: any[];
-            private allCategoryObjects: DataViewObjects[];
-            private categoryColumnRef: data.SQExpr[];
+            private mapSeries: DataViewCategoryColumn;
+            private areaSeries: DataViewCategoryColumn;
+            private category: DataViewCategoryColumn;
+            private categoryFormatString: string;
             private legendDataPoints: LegendDataPoint[];
             private colorHelper: ColorHelper;
             private forcedColor: string;
-            private categoryFormatString: string;
 
             public hasHighlights: boolean;
             public dataPoints: SynopticPanelDataPoint[];
+            public mapsAndAreas: any[];
             public legendData: LegendData;
             public dataLabelsSettings: VisualDataLabelsSettings;
             public legendObjectProperties: DataViewObject;
@@ -1520,12 +1712,36 @@ module powerbi.visuals {
                 this.maxValue = 0;
 
                 if (dataViewCategorical.categories && dataViewCategorical.categories.length > 0) {
-                    var category = dataViewCategorical.categories[0];
-                    this.categoryIdentities = category.identity;
-                    this.categoryValues = category.values;
-                    this.allCategoryObjects = category.objects;
-                    this.categoryColumnRef = category.identityFields;
-                    this.categoryFormatString = valueFormatter.getFormatString(category.source, synopticPanelProps.general.formatString);
+
+                    for (var cat = 0; cat < dataViewCategorical.categories.length; cat++) { 
+
+                        var category = dataViewCategorical.categories[cat];
+                        if (category.source.roles['Category']) {
+                            this.category = category;
+                            this.categoryFormatString = valueFormatter.getFormatString(this.category.source, synopticPanelProps.general.formatString);
+
+                        } else if (category.source.roles['MapSeries']) {
+                            this.mapSeries = category;
+
+                        } else if (category.source.roles['AreaSeries']) {
+                            this.areaSeries = category;
+                        }
+                    }
+                }
+
+                this.mapsAndAreas = [];
+                if (this.mapSeries) {
+                    var arr = [];
+                    for (var ma = 0; ma < this.mapSeries.values.length; ma++) {
+                        var map = this.mapSeries.values[ma];
+                        if (map && arr.indexOf(map) < 0) {
+                            arr.push(map);
+                            this.mapsAndAreas.push({
+                                map: map,
+                                areas: (this.areaSeries ? this.areaSeries.values[ma] : '')
+                            });
+                        }
+                    }
                 }
 
                 var grouped = this.grouped = dataViewCategorical && dataViewCategorical.values ? dataViewCategorical.values.grouped() : undefined;
@@ -1569,7 +1785,7 @@ module powerbi.visuals {
                 if (this.total !== 0) {
                     // If category exists, we render labels using category values. If not, we render labels
                     // using measure labels.
-                    if (this.categoryValues) {
+                    if (this.category && this.category.values) {
                         convertedData = this.convertCategorical();
                     }
                     else {
@@ -1662,7 +1878,9 @@ module powerbi.visuals {
                         selected: false,
                         tooltipInfo: tooltipInfo,
                         color: point.color,
-                        labelFormatString: valuesMetadata.format
+                        labelFormatString: valuesMetadata.format,
+                        mapMeasure: point.mapMeasure,
+                        areasMeasure: point.areasMeasure
                     });
                 }
 
@@ -1673,33 +1891,28 @@ module powerbi.visuals {
                 if (this.total !== 0) {
                     // If category exists, we render title using category source. If not, we render title
                     // using measure.
-                    var dvValuesSourceName = this.dataViewCategorical.values && this.dataViewCategorical.values.source
-                        ? this.dataViewCategorical.values.source.displayName : "";
-                    var dvCategorySourceName = this.dataViewCategorical.categories && this.dataViewCategorical.categories.length > 0 && this.dataViewCategorical.categories[0].source
-                        ? this.dataViewCategorical.categories[0].source.displayName : "";
-                    if (this.categoryValues) {
-                        return dvCategorySourceName;
-                    }
-                    else {
-                        return dvValuesSourceName;
-                    }
+                    if (this.category && this.category.values)
+                        return (this.category ? this.category.source.displayName : "");
+                    else
+                        return (this.dataViewCategorical.values && this.dataViewCategorical.values.source ? this.dataViewCategorical.values.source.displayName : "");
                 }
-                else {
-                    return "";
-                }
+
+                return "";
             }
          
             private convertCategorical(): ConvertedDataPoint[] {
                 var dataViewCategorical = this.dataViewCategorical;
                 var formatStringProp = synopticPanelProps.general.formatString;
                 var dataPoints: ConvertedDataPoint[] = [];
- 
-                for (var categoryIndex = 0, categoryCount = this.categoryValues.length; categoryIndex < categoryCount; categoryIndex++) {
-                    var categoryValue = this.categoryValues[categoryIndex];
-                    var thisCategoryObjects = this.allCategoryObjects ? this.allCategoryObjects[categoryIndex] : undefined;
 
-                    var legendIdentity = SelectionId.createWithId(this.categoryIdentities[categoryIndex]);
-                    var color = (this.forcedColor ? this.forcedColor : this.colorHelper.getColorForSeriesValue(thisCategoryObjects, this.categoryColumnRef, categoryValue));
+                for (var categoryIndex = 0, categoryCount = this.category.values.length; categoryIndex < categoryCount; categoryIndex++) {
+                    var categoryValue = this.category.values[categoryIndex];
+                    var mapValue = (this.mapSeries ? this.mapSeries.values[categoryIndex] : undefined);
+                    var areaValue = (this.areaSeries ? this.areaSeries.values[categoryIndex] : undefined);
+
+                    var thisCategoryObjects = (this.category.objects ? this.category.objects[categoryIndex] : undefined);
+                    var legendIdentity = SelectionId.createWithId(this.category.identity[categoryIndex]);
+                    var color = (this.forcedColor ? this.forcedColor : this.colorHelper.getColorForSeriesValue(thisCategoryObjects, this.category.identityFields, categoryValue));
                     var categoryLabel = valueFormatter.format(categoryValue, this.categoryFormatString);
 
                     var dataPoint: ConvertedDataPoint = {};
@@ -1732,7 +1945,7 @@ module powerbi.visuals {
                                     seriesGroup = seriesData;
 
                                 var identity: SelectionId = SelectionIdBuilder.builder()
-                                    .withCategory(dataViewCategorical.categories[0], categoryIndex)
+                                    .withCategory(this.category, categoryIndex)
                                     .withSeries(seriesGroup, seriesGroup)
                                     .withMeasure(measure)
                                     .createSelectionId();
@@ -1752,6 +1965,8 @@ module powerbi.visuals {
                                 dataPoint.categoryLabel = categoryLabel;
                                 dataPoint.color = color;
                                 dataPoint.seriesIndex = seriesIndex;
+                                dataPoint.mapMeasure = mapValue;
+                                dataPoint.areasMeasure = areaValue;
                             }
 
                             //Check if same serie has more roles
