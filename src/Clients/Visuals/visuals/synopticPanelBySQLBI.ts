@@ -1,7 +1,7 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
  *  Use designer at https://synoptic.design
- *  v0.4.1
+ *  v0.4.2
  *
  *  Power BI Visualizations
  *
@@ -191,6 +191,7 @@ module powerbi.visuals {
         private toolbar: JQuery;
         private boundMapsCombo: JQuery;
         private selectedBoundMapIndex: number;
+        private lastBoundMapsAndAreasIdentity: string;
         private host: IVisualHostServices;
         private selectionManager: SelectionManager;
         private style: IVisualStyle;
@@ -533,7 +534,6 @@ module powerbi.visuals {
             this.legend = createLegend(this.element, this.isInteractive, this.interactivityService, true);
             this.galleryRetreiving = false;
             this.gallerySubmissions = {};
-            this.selectedBoundMapIndex = -1;
 
             this.data = {
                 dataPoints: [],
@@ -544,6 +544,7 @@ module powerbi.visuals {
             };
 
             this.clearMap();
+            this.noMapsOrAreasBound();
         }
 
         public setToolbar(showToolbar) {
@@ -672,7 +673,8 @@ module powerbi.visuals {
                             fr.readAsText(file);
 
                         fr.onload = function () {
-                            self.selectedBoundMapIndex = -1;
+                            self.noMapsOrAreasBound();
+
                             if (isImage) {
                                 self.initialImage = null;
                                 self.data.imageData = fr.result;
@@ -721,7 +723,7 @@ module powerbi.visuals {
                             toolbar.find('.gallery-list').css('opacity', 0.3).append(loader);
                             self.data.areasData = submission.areas;
                         }
-                        self.selectedBoundMapIndex = -1;
+                        self.noMapsOrAreasBound();
 
                         self.persistData();
                         self.renderMap();
@@ -883,13 +885,28 @@ module powerbi.visuals {
                 });
 
             if (this.data.boundMapsAndAreas.length > 0) {
+                if (this.selectedBoundMapIndex >= this.data.boundMapsAndAreas.length)
+                    this.selectedBoundMapIndex = -1;
+
+                var identity = '';
+                var changed = false;
                 if (this.selectedBoundMapIndex === -1) {
+                    identity = this.data.boundMapsAndAreas[0].map + '-' + this.data.boundMapsAndAreas[0].areas;
+                    changed = true;
+                } else {
+                    identity = this.data.boundMapsAndAreas[this.selectedBoundMapIndex].map + '-' + this.data.boundMapsAndAreas[this.selectedBoundMapIndex].areas;
+                    changed = (this.lastBoundMapsAndAreasIdentity !== identity);
+                }
+
+                if (changed) {
+                    this.lastBoundMapsAndAreasIdentity = identity;
                     this.renderBoundMap();
                     this.setToolbar(this.inEditingMode);
                     return;
                 }
             } else {
-                if (this.selectedBoundMapIndex > -1) {
+                if (this.lastBoundMapsAndAreasIdentity !== '') {
+                //if (this.selectedBoundMapIndex > -1) {
                     this.clearBoundMap();
                     this.setToolbar(this.inEditingMode);
                     return;
@@ -900,8 +917,13 @@ module powerbi.visuals {
             this.setToolbar(this.inEditingMode);
         }
 
-        private clearBoundMap() {
+        private noMapsOrAreasBound() {
+            this.selectedBoundMapIndex = -1;
+            this.lastBoundMapsAndAreasIdentity = '';
+        }
 
+        private clearBoundMap() {
+            this.noMapsOrAreasBound();
             this.renderBoundMap(-1);
             this.clearMap();
         }
@@ -1458,12 +1480,12 @@ module powerbi.visuals {
         private persistData(): void {
             var properties: any = {};
             if (this.data.imageData != null)
-                properties.imageData = powerbi.data.SQExprBuilder.text(this.data.imageData);
+                properties.imageData = powerbi.data.SQExprBuilder.text(String(this.data.imageData));
             else 
                 properties.imageData = '';
 
             if (this.data.areasData != null)
-                properties.areasData = powerbi.data.SQExprBuilder.text(this.data.areasData);
+                properties.areasData = powerbi.data.SQExprBuilder.text(String(this.data.areasData));
             else
                 properties.areasData = '';
 
@@ -1739,7 +1761,7 @@ module powerbi.visuals {
                             arr.push(map);
                             this.mapsAndAreas.push({
                                 map: map,
-                                areas: (this.areaSeries ? this.areaSeries.values[ma] : '')
+                                areas: (this.areaSeries ? this.areaSeries.values[ma] : ''),
                             });
                         }
                     }
