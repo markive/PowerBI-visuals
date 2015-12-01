@@ -1015,7 +1015,7 @@ module powerbi.visuals {
                                 }
 
                                 var children = this.children;
-                                if (children.length == 0) {
+                                if (!children || children.length == 0) {
                                     var el = d3.select(this);
                                     self.initialImage.unmatched.push(el);
                                 }
@@ -1148,6 +1148,7 @@ module powerbi.visuals {
                     this.parsedAreas = json.areas;
                 }
                 var areas = this.parsedAreas;
+                if (!areas) return;
 
                 //Resize points
                 var m = Math.min(this.currentViewport.width / this.initialImage.width, this.currentViewport.height / this.initialImage.height);
