@@ -1,7 +1,7 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
  *  Use designer at https://synoptic.design
- *  v0.4.3
+ *  v0.4.4
  *
  *  Power BI Visualizations
  *
@@ -546,7 +546,7 @@ module powerbi.visuals {
             var toggleGallery = function (showGallery) {
                 if (showGallery) {
                     toolbar.find('.gallery').addClass('active');
-                    toolbar.animate({ height: 300 }, 300, function () {
+                    toolbar.animate({ height: 320 }, 300, function () {
 
                         var gallery = toolbar.find('.gallery-list');
                         gallery.show();
@@ -1177,12 +1177,14 @@ module powerbi.visuals {
                         g
                             .data([(found ? dataPoint : area.name)])
                             .classed('poly', true)
-                            .style('opacity', ColumnUtil.getFillOpacity(dataPoint.selected, dataPoint.highlightRatio > 0, false, this.data.hasHighlights))
                             .style('fill', color)
                             .style('fill-opacity', opacity)
                             .style('stroke', color)
                             .style('stroke-width', (isTextShape ? '0' : '2'))
                             .style('stroke-opacity', opacity);
+                        
+                        if (found)
+                            g.style('opacity', ColumnUtil.getFillOpacity(dataPoint.selected, dataPoint.highlightRatio > 0, false, this.data.hasHighlights))
 
                         var polyRect: SVGRect = g[0][0].getBBox();
 
