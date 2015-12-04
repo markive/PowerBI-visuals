@@ -1376,8 +1376,8 @@ module powerbi.visuals {
 
         private persistData(): void {
             var properties: any = {};
-            properties.imageData = (this.data.imageData ? this.data.imageData : '');
-            //properties.imageData = (this.data.imageData ? powerbi.data.SQExprBuilder.text(String(this.data.imageData)) : '');
+            //properties.imageData = (this.data.imageData ? this.data.imageData : '');
+            properties.imageData = (this.data.imageData ? powerbi.data.SQExprBuilder.text(String(this.data.imageData)) : '');
 
             this.host.persistProperties({
 				merge: [{
