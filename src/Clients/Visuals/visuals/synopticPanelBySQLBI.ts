@@ -1,7 +1,7 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
  *  Use designer at https://synoptic.design
- *  v0.4.4
+ *  v0.4.5
  *
  *  Power BI Visualizations
  *
@@ -1054,7 +1054,12 @@ module powerbi.visuals {
                     name = dom.id;
                 }
             }
-            return name.replace(/_/g, ' ');
+            return name.replace(/_/g, ' ').trim();
+        }
+
+        private getLegalId(str) {
+            var returnStr = str.replace(/([^A-Za-z0-9[\]{}_.:-])\s?/g, '_');
+            return '_' + returnStr;
         }
 
         private clearMap(append?) {
@@ -1123,7 +1128,7 @@ module powerbi.visuals {
                     for (var i = 0; i < this.data.dataPoints.length; i++) {
                         dataPoint = this.data.dataPoints[i];
 
-                        if (dataPoint.label.toLowerCase() === area.name.toLowerCase() || dataPoint.categoryLabel.toLowerCase() === area.name.toLowerCase()) {
+                        if (this.getLegalId(dataPoint.label.toLowerCase()) === area.elementId.toLowerCase() || this.getLegalId(dataPoint.categoryLabel.toLowerCase()) === area.elementId.toLowerCase()) {
                             found = true;
                             color = dataPoint.color;
                             opacity = SynopticPanelBySQLBI.BaseOpacity;
@@ -1164,12 +1169,15 @@ module powerbi.visuals {
                     if ((!this.data.showAllAreas || !this.data.showAllShapes) && !found) {
 
                         if (area.elementId && !this.data.showAllShapes) {
-                            this.svg.select('#' + area.elementId).style('display', 'none');
+                            var g = this.svg.select('#' + area.elementId);
+                            if (!g.empty())
+                                g.style('display', 'none');
                         }
 
                     } else {
 
                         var g = this.svg.select('#' + area.elementId);
+                        if (g.empty()) continue;
 
                         var isTextShape = (g[0][0].tagName.toLowerCase() === 'text');
                         var drawLabel = !isTextShape;
