@@ -1,7 +1,7 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
  *  Use designer at https://synoptic.design
- *  v0.4.5.1
+ *  v0.4.6
  *
  *  Power BI Visualizations
  *
@@ -970,9 +970,9 @@ module powerbi.visuals {
                                     return;
                             }
                             if (el.classed('excluded')) return;
-
+                            var title = this.getAttribute('title');
                             var name = self.getSVGName(this);
-                            if (name === '') return;
+                            if (name === '' && (!title || title === '')) return;
 
                             self.initialImage.matched.push({
                                 id: this.id,
@@ -987,6 +987,7 @@ module powerbi.visuals {
 
                             areas.push({
                                 'name': name,
+                                'title': title,
                                 'elementId': this.id
                             });
                         });
@@ -1041,18 +1042,13 @@ module powerbi.visuals {
 
         private getSVGName(dom) {
             var name = '';
-            var title = dom.getAttribute('title');
-            if (title && title !== '') {
-                name = title;
+            var isText = (dom.tagName.toLowerCase() === 'text');
+            var isAutoId = (dom.id.indexOf('XMLID_') === 0);
+            if (isAutoId) {
+                if (isText)
+                    name = dom.textContent;
             } else {
-                var isText = (dom.tagName.toLowerCase() === 'text');
-                var isAutoId = (dom.id.indexOf('XMLID_') === 0);
-                if (isAutoId) {
-                    if (isText)
-                        name = dom.textContent;
-                } else {
-                    name = dom.id;
-                }
+                name = dom.id;
             }
             return name.replace(/_/g, ' ').trim();
         }
@@ -1214,7 +1210,7 @@ module powerbi.visuals {
 
                             if (this.data.showAreasLabels) {
 
-                                labelText = area.name; //dataLabelUtils.getLabelFormattedText(area.name, polyWidth - (padding * 2));
+                                labelText = (area.title ? area.title : area.name); //dataLabelUtils.getLabelFormattedText(area.name, polyWidth - (padding * 2));
                                 labelItalic = true;
                                 wrap = true;
                             }
@@ -1231,7 +1227,7 @@ module powerbi.visuals {
                                     labelText = dataLabelUtils.getLabelFormattedText(dataPoint.measure, polyRect.width - (padding * 2), dataPoint.labelFormatString, measureFormatter);
 
                                 } else {
-                                    labelText = dataPoint.label; //dataLabelUtils.getLabelFormattedText(dataPoint.label, polyWidth - (padding * 2));
+                                    labelText = (area.title ? area.title : dataPoint.label); //dataLabelUtils.getLabelFormattedText(dataPoint.label, polyWidth - (padding * 2));
                                     wrap = true;
 
                                 }
