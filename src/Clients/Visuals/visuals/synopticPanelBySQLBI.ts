@@ -1,7 +1,7 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
  *  Use designer at https://synoptic.design
- *  v0.4.5
+ *  v0.4.5.1
  *
  *  Power BI Visualizations
  *
@@ -1059,7 +1059,10 @@ module powerbi.visuals {
 
         private getLegalId(str) {
             var returnStr = str.replace(/([^A-Za-z0-9[\]{}_.:-])\s?/g, '_');
-            return '_' + returnStr;
+            if (!isNaN(parseInt(returnStr, 10)))
+                returnStr = '_' + returnStr;
+
+            return returnStr;
         }
 
         private clearMap(append?) {
@@ -1128,7 +1131,7 @@ module powerbi.visuals {
                     for (var i = 0; i < this.data.dataPoints.length; i++) {
                         dataPoint = this.data.dataPoints[i];
 
-                        if (this.getLegalId(dataPoint.label.toLowerCase()) === area.elementId.toLowerCase() || this.getLegalId(dataPoint.categoryLabel.toLowerCase()) === area.elementId.toLowerCase()) {
+                        if (this.getLegalId(dataPoint.label.toLowerCase()) === this.getLegalId(area.elementId.toLowerCase()) || this.getLegalId(dataPoint.categoryLabel.toLowerCase()) === this.getLegalId(area.elementId.toLowerCase())) {
                             found = true;
                             color = dataPoint.color;
                             opacity = SynopticPanelBySQLBI.BaseOpacity;
