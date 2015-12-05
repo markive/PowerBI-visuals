@@ -336,7 +336,7 @@ module powerbi.visuals {
                     },
                 },
                 dataPoint: {
-                    displayName: data.createDisplayNameGetter('Visual_DataPoint'),
+                    displayName: 'Colors',
                     properties: {
                         defaultColor: {
                             displayName: data.createDisplayNameGetter('Visual_DefaultColor'),
@@ -1200,7 +1200,7 @@ module powerbi.visuals {
                         else
                             TooltipManager.addTooltip(g, (tooltipEvent: TooltipEvent) => [{ displayName: 'Area', value: tooltipEvent.data }]);
 
-                        if (drawLabel && ((this.data.showAllAreas && this.data.showAreasLabels) || (found && (this.data.dataLabelsSettings.show || this.data.dataLabelsSettings.showCategory)))) {
+                        if (drawLabel && ((!found && this.data.showAllAreas && this.data.showAreasLabels) || (found && (this.data.dataLabelsSettings.show || this.data.dataLabelsSettings.showCategory)))) {
 
                             var padding: number = 6;
       
@@ -1226,6 +1226,9 @@ module powerbi.visuals {
 
                                     labelText = dataLabelUtils.getLabelFormattedText(dataPoint.measure, polyRect.width - (padding * 2), dataPoint.labelFormatString, measureFormatter);
 
+                                    //TODO Power BI Bug?
+                                    if (labelText === '') labelText = dataPoint.measure;
+
                                 } else {
                                     labelText = (area.title ? area.title : dataPoint.label); //dataLabelUtils.getLabelFormattedText(dataPoint.label, polyWidth - (padding * 2));
                                     wrap = true;
@@ -1233,9 +1236,9 @@ module powerbi.visuals {
                                 }
                             }
 
-                            var fontSize = 11;
+                            var fontSize = parseInt(this.element.css('font-size'), 10);
                             var lines = (wrap ?
-                                            this.wrapText(labelText, polyRect.width - (padding * 2), polyRect.height) :
+                                            this.wrapText(labelText, fontSize, polyRect.width - (padding * 2), polyRect.height) :
                                             [[labelText, TextMeasurementService.measureSvgTextWidth({ fontFamily: dataLabelUtils.LabelTextProperties.fontFamily, fontSize: fontSize + 'px', text: labelText })]]);
                
                             var l = this.svg
@@ -1329,9 +1332,8 @@ module powerbi.visuals {
             }
         }
 
-        private wrapText(text, width, height): any {
+        private wrapText(text, fontSize, width, height): any {
 
-            var fontSize = 11;
             var lines = [];
             var words = text.split(' ');
             
@@ -1383,7 +1385,7 @@ module powerbi.visuals {
 
         private persistData(): void {
             var properties: any = {};
-            //properties.imageData = (this.data.imageData ? this.data.imageData : ''); //Dec 04, 2015: Uncomment to work in online... why?
+            //properties.imageData = (this.data.imageData ? this.data.imageData : ''); //TODO Power BI bug? Works online only if uncomment from Dec 04, 2015
             properties.imageData = (this.data.imageData ? powerbi.data.SQExprBuilder.text(String(this.data.imageData)) : '');
 
             this.host.persistProperties({
