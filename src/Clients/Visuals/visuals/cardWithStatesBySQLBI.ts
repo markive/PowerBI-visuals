@@ -1,10 +1,10 @@
 /*
  *  Card With States By SQLBI
- *  v0.4.0
+ *  v1.1.0
  *
  *  Power BI Visualizations
  *
- *  Copyright (c) Microsoft Corporation
+ *  Copyright (c) SQLBI
  *  All rights reserved. 
  *  MIT License
  *
@@ -151,7 +151,7 @@ module powerbi.visuals {
                 {
                     name: 'Values',
                     kind: VisualDataRoleKind.Measure,
-                    displayName: data.createDisplayNameGetter('Role_DisplayName_Value')
+                    displayName: 'Value'
                 }, {
                     name: 'TargetValue',
                     kind: VisualDataRoleKind.Measure,
@@ -191,18 +191,18 @@ module powerbi.visuals {
                     },
                 },
                 labels: {
-                    displayName: data.createDisplayNameGetter('Visual_DataPointLabel'),
+                    displayName: 'Label',
                     properties: {
                         color: {
-                            displayName: 'Base Color',
+                            displayName: 'Base color',
                             type: { fill: { solid: { color: true } } }
                         },
                         labelDisplayUnits: {
-                            displayName: data.createDisplayNameGetter('Visual_DisplayUnits'),
+                            displayName: 'Display units',
                             type: { formatting: { labelDisplayUnits: true } }
                         },
                         labelPrecision: {
-                            displayName: data.createDisplayNameGetter('Visual_Precision'),
+                            displayName: 'Decimal points',
                             type: { numeric: true }
                         },
                     },
@@ -211,23 +211,23 @@ module powerbi.visuals {
                     displayName: 'State 1',
                     properties: {
                         color: {
-                            displayName: data.createDisplayNameGetter('Visual_LabelsFill'),
+                            displayName: 'Color',
                             type: { fill: { solid: { color: true } } }
                         },
                         dataMin: {
-                            displayName: 'From Value',
+                            displayName: 'From value',
                             type: { numeric: true }
                         },
                         dataMax: {
-                            displayName: 'To Value',
+                            displayName: 'To value',
                             type: { numeric: true }
                         },
                         showLabel: {
-                            displayName: 'Show Label',
+                            displayName: 'Label',
                             type: { bool: true }
                         },
                         label: {
-                            displayName: 'Label Text',
+                            displayName: 'Label text',
                             type: { text: true }
                         },
                     },
@@ -236,23 +236,23 @@ module powerbi.visuals {
                     displayName: 'State 2',
                     properties: {
                         color: {
-                            displayName: data.createDisplayNameGetter('Visual_LabelsFill'),
+                            displayName: 'Color',
                             type: { fill: { solid: { color: true } } }
                         },
                         dataMin: {
-                            displayName: 'From Value',
+                            displayName: 'From value',
                             type: { numeric: true }
                         },
                         dataMax: {
-                            displayName: 'To Value',
+                            displayName: 'To value',
                             type: { numeric: true }
                         },
                         showLabel: {
-                            displayName: 'Show Label',
+                            displayName: 'Label',
                             type: { bool: true }
                         },
                         label: {
-                            displayName: 'Label Text',
+                            displayName: 'Label text',
                             type: { text: true }
                         },
                     },
@@ -261,32 +261,32 @@ module powerbi.visuals {
                     displayName: 'State 3',
                     properties: {
                         color: {
-                            displayName: data.createDisplayNameGetter('Visual_LabelsFill'),
+                            displayName: 'Color',
                             type: { fill: { solid: { color: true } } }
                         },
                         dataMin: {
-                            displayName: 'From Value',
+                            displayName: 'From value',
                             type: { numeric: true }
                         },
                         dataMax: {
-                            displayName: 'To Value',
+                            displayName: 'To value',
                             type: { numeric: true }
                         },
                         showLabel: {
-                            displayName: 'Show Label',
+                            displayName: 'Label',
                             type: { bool: true }
                         },
                         label: {
-                            displayName: 'Label Text',
+                            displayName: 'Label text',
                             type: { text: true }
                         },
                     },
                 },
                 cardTitle: {
-                    displayName: 'Description Label',
+                    displayName: 'Description label',
                     properties: {
                         color: {
-                            displayName: data.createDisplayNameGetter('Visual_LabelsFill'),
+                            displayName: 'Color',
                             type: { fill: { solid: { color: true } } }
                         },
                         text: {
@@ -294,7 +294,7 @@ module powerbi.visuals {
                             type: { text: true }
                         },
                         show: {
-                            displayName: data.createDisplayNameGetter('Visual_Show'),
+                            displayName: 'Show',
                             type: { bool: true }
                         },
                     },
@@ -360,6 +360,7 @@ module powerbi.visuals {
 
             var dataView = options.dataViews[0];
             var value: any;
+            var target: any;
             var valueCol;
             
             if (dataView && dataView.categorical && dataView.categorical.values && dataView.metadata && dataView.metadata.columns) {
@@ -420,7 +421,7 @@ module powerbi.visuals {
                             }
 
                             if (col.roles['TargetValue']) {
-                                this.target = v;
+                                target = v;
                             }
                             if (col.roles['State1Min']) {
                                 this.cardFormatSettings.dataState1.dataMin = v;
@@ -481,17 +482,17 @@ module powerbi.visuals {
             var performanceLabel = '';
 
             var valueColor = labelSettings.labelColor;
-            if (this.target <= this.cardFormatSettings.dataState1.dataMax && this.target >= this.cardFormatSettings.dataState1.dataMin) {
+            if (target <= this.cardFormatSettings.dataState1.dataMax && target >= this.cardFormatSettings.dataState1.dataMin) {
                 valueColor = this.cardFormatSettings.dataState1.color;
                 if (this.cardFormatSettings.dataState1.showLabel)
                     performanceLabel = this.cardFormatSettings.dataState1.label;
 
-            } else if (this.target <= this.cardFormatSettings.dataState2.dataMax && this.target >= this.cardFormatSettings.dataState2.dataMin) {
+            } else if (target <= this.cardFormatSettings.dataState2.dataMax && target >= this.cardFormatSettings.dataState2.dataMin) {
                 valueColor = this.cardFormatSettings.dataState2.color;
                 if (this.cardFormatSettings.dataState2.showLabel)
                     performanceLabel = this.cardFormatSettings.dataState2.label;
 
-            } else if (this.target <= this.cardFormatSettings.dataState3.dataMax && this.target >= this.cardFormatSettings.dataState3.dataMin) {
+            } else if (target <= this.cardFormatSettings.dataState3.dataMax && target >= this.cardFormatSettings.dataState3.dataMin) {
                 valueColor = this.cardFormatSettings.dataState3.color;
                 if (this.cardFormatSettings.dataState3.showLabel)
                     performanceLabel = this.cardFormatSettings.dataState3.label;
@@ -586,6 +587,7 @@ module powerbi.visuals {
             this.toolTip.text(value);
 
             this.value = value;
+            this.target = target;
         }
 
         public updateViewport(viewport: IViewport): void {
