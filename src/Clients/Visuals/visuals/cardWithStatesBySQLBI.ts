@@ -451,7 +451,7 @@ module powerbi.visuals {
                     }
                 }
                 
-            }
+        }
 
             var start = this.value;
             if (value === undefined) {
@@ -609,6 +609,8 @@ module powerbi.visuals {
 
         public clear(valueOnly: boolean = false) {
             this.svg.select(CardWithStatesBySQLBI.Value.selector).text('');
+            this.labelContext.selectAll('.perf').remove();
+            this.labelContext.selectAll('circle').remove();
 
             if (!valueOnly)
                 this.svg.select(CardWithStatesBySQLBI.Label.selector).text('');

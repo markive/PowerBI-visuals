@@ -1,7 +1,7 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
  *  Use designer at https://synoptic.design
- *  v0.4.6
+ *  v1.1.0
  *
  *  Power BI Visualizations
  *
@@ -255,15 +255,15 @@ module powerbi.visuals {
                 {
                     name: 'Category',
                     kind: VisualDataRoleKind.Grouping,
-                    displayName: data.createDisplayNameGetter('Role_DisplayName_Legend'),
+                    displayName: 'Legend',
                 }, {
                     name: 'Series',
                     kind: VisualDataRoleKind.Grouping,
-                    displayName: data.createDisplayNameGetter('Role_DisplayName_Details'),
+                    displayName: 'Details',
                 }, {
                     name: 'Y',
                     kind: VisualDataRoleKind.Measure,
-                    displayName: data.createDisplayNameGetter('Role_DisplayName_Values'),
+                    displayName:'Values',
                 }, {
                      name: 'MapSeries',
                      kind: VisualDataRoleKind.Grouping,
@@ -339,7 +339,7 @@ module powerbi.visuals {
                     displayName: 'Colors',
                     properties: {
                         defaultColor: {
-                            displayName: data.createDisplayNameGetter('Visual_DefaultColor'),
+                            displayName: 'Default color',
                             type: { fill: { solid: { color: true } } }
                         },
                         showAllDataPoints: {
@@ -347,7 +347,7 @@ module powerbi.visuals {
                             type: { bool: true }
                         },
                         fill: {
-                            displayName: data.createDisplayNameGetter('Visual_Fill'),
+                            displayName: 'Color',
                             type: { fill: { solid: { color: true } } }
                         },
                     }
@@ -369,7 +369,7 @@ module powerbi.visuals {
                     displayName: 'State 1',
                     properties: {
                         color: {
-                            displayName: data.createDisplayNameGetter('Visual_LabelsFill'),
+                            displayName: 'Color',
                             type: { fill: { solid: { color: true } } }
                         },
                         dataMin: {
@@ -386,7 +386,7 @@ module powerbi.visuals {
                     displayName: 'State 2',
                     properties: {
                         color: {
-                            displayName: data.createDisplayNameGetter('Visual_LabelsFill'),
+                            displayName: 'Color',
                             type: { fill: { solid: { color: true } } }
                         },
                         dataMin: {
@@ -403,7 +403,7 @@ module powerbi.visuals {
                     displayName: 'State 3',
                     properties: {
                         color: {
-                            displayName: data.createDisplayNameGetter('Visual_LabelsFill'),
+                            displayName: 'Color',
                             type: { fill: { solid: { color: true } } }
                         },
                         dataMin: {
@@ -417,48 +417,48 @@ module powerbi.visuals {
                     },
                 },
                 dataLabels: {
-                    displayName: data.createDisplayNameGetter('Visual_DataPointsLabels'),
+                    displayName: 'Data labels',
                     properties: {
                         show: {
-                            displayName: data.createDisplayNameGetter('Visual_Show'),
+                            displayName: 'Show',
                             type: { bool: true }
                         },
                         labelDisplayUnits: {
-                            displayName: data.createDisplayNameGetter('Visual_DisplayUnits'),
+                            displayName: 'Display units',
                             type: { formatting: { labelDisplayUnits: true } }
                         },
                         labelPrecision: {
-                            displayName: data.createDisplayNameGetter('Visual_Precision'),
+                            displayName: 'Decimal points',
                             type: { numeric: true }
                         },
                     },
                 },
                 categoryLabels: {
-                    displayName: data.createDisplayNameGetter('Visual_CategoryLabels'),
+                    displayName: 'Category Labels',
                     properties: {
                         show: {
-                            displayName: data.createDisplayNameGetter('Visual_Show'),
+                            displayName: 'Show',
                             type: { bool: true }
                         },
                     },
                 },
                 legend: {
-                    displayName: data.createDisplayNameGetter('Visual_Legend'),
+                    displayName: 'Legend',
                     properties: {
                         show: {
-                            displayName: data.createDisplayNameGetter('Visual_Show'),
+                            displayName: 'Show',
                             type: { bool: true }
                         },
                         position: {
-                            displayName: data.createDisplayNameGetter('Visual_LegendPosition'),
+                            displayName: 'Position',
                             type: { formatting: { legendPosition: true } }
                         },
                         showTitle: {
-                            displayName: data.createDisplayNameGetter('Visual_LegendShowTitle'),
+                            displayName: 'Title',
                             type: { bool: true }
                         },
                         titleText: {
-                            displayName: data.createDisplayNameGetter('Visual_LegendTitleText'),
+                            displayName: 'Title text',
                             type: { text: true }
                         }
                     }
@@ -1385,8 +1385,7 @@ module powerbi.visuals {
 
         private persistData(): void {
             var properties: any = {};
-            //properties.imageData = (this.data.imageData ? this.data.imageData : ''); //TODO Power BI bug? Works online only if uncomment from Dec 04, 2015
-            properties.imageData = (this.data.imageData ? powerbi.data.SQExprBuilder.text(String(this.data.imageData)) : '');
+            properties.imageData = (this.data.imageData ? this.data.imageData : '');
 
             this.host.persistProperties({
 				merge: [{
