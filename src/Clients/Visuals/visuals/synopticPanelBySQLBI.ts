@@ -1,9 +1,11 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
- *  Use designer at https://synoptic.design
- *  v1.1.0
- *
- *  Power BI Visualizations
+ *  v1.1.9
+ *  The Synoptic Panel connects areas in a picture with attributes in the data model, coloring each area with a state (red/yellow green) or with a saturation of a color related to the value of a measure. Starting from any image, you draw custom areas using https://synoptic.design, which generates a SVG file you import in the Synoptic Panel. You can visualize data over a map, a planimetry, a diagram, a flow chart.
+ * 
+ *  Contact info@sqlbi.com
+ *  Support URL http://www.sqlbi.com/tv/synoptic-panel-for-power-bi/
+ *  Github URL https://github.com/danieleperilli/PowerBI-visuals/blob/master/src/Clients/Visuals/visuals/synopticPanelBySQLBI.ts
  *
  *  Copyright (c) SQLBI
  *  All rights reserved. 
@@ -109,9 +111,11 @@ module powerbi.visuals {
         general: {
             formatString: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'formatString' },
             imageData: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'imageData' },
-            showAllShapes: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'showAllShapes' },
-            showAllAreas: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'showAllAreas' },
-            showAreasLabels: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'showAreasLabels' },
+        },
+        dataAreas: {     
+            showAllShapes: <DataViewObjectPropertyIdentifier>{ objectName: 'dataAreas', propertyName: 'showAllShapes' },
+            showAllAreas: <DataViewObjectPropertyIdentifier>{ objectName: 'dataAreas', propertyName: 'showAllAreas' },
+            showAreasLabels: <DataViewObjectPropertyIdentifier>{ objectName: 'dataAreas', propertyName: 'showAreasLabels' },
         },
         dataPoint: {
             defaultColor: <DataViewObjectPropertyIdentifier>{ objectName: 'dataPoint', propertyName: 'defaultColor' },
@@ -249,6 +253,18 @@ module powerbi.visuals {
             };
         }
 
+        public static isValidURL(str): boolean {
+            if (typeof str === 'undefined' || !str) return false;
+
+            var pattern = new RegExp('^(https?:\\/\\/)?' + // protocol
+                '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.?)+[a-z]{2,}|' + // domain name
+                '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+                '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+                '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+                '(\\#[-a-z\\d_]*)?$', 'i'); // fragment locator
+            return pattern.test(str);
+        }
+
         //Capabilities
         public static capabilities: VisualCapabilities = {
              dataRoles: [
@@ -312,15 +328,20 @@ module powerbi.visuals {
             ],
             objects: {
                 general: {
-                    displayName: 'Unmatched areas',
+                    displayName: 'General',
                     properties: {
                         formatString: {
                             type: { formatting: { formatString: true } },
-                        },
+                        }, 
                         imageData: {
                             displayName: 'Map data',
                             type: { text: true }
                         },
+                    },
+                },
+                dataAreas: {
+                    displayName: 'Unmatched areas',
+                    properties: {
                         showAllShapes: {
                             displayName: 'Show',
                             type: { bool: true }
@@ -467,8 +488,7 @@ module powerbi.visuals {
 
             dataViewMappings: [{
                 conditions: [
-                    { 'Category': { max: 1 }, 'Series': { max: 1 }, 'Y': { max: 1 }, 'MapSeries': { max: 1 }, 'State': { max: 1 }, 'State1Min': { max: 1 }, 'State1Max': { max: 1 }, 'State2Min': { max: 1 }, 'State2Max': { max: 1 }, 'State3Min': { max: 1 }, 'State3Max': { max: 1 }, 'Saturation': { max: 0 }, 'SaturationMin': { max: 0 }, 'SaturationMax': { max: 0 } },
-                    { 'Category': { max: 1 }, 'Series': { max: 1 }, 'Y': { max: 1 }, 'MapSeries': { max: 1 }, 'State': { max: 0 }, 'State1Min': { max: 0 }, 'State1Max': { max: 0 }, 'State2Min': { max: 0 }, 'State2Max': { max:0 }, 'State3Min': { max: 0 }, 'State3Max': { max: 0 }, 'Saturation': { max: 1 }, 'SaturationMin': { max: 1 }, 'SaturationMax': { max: 1 } },
+                    { 'Category': { max: 1 }, 'Series': { max: 1 }, 'Y': { max: 1 }, 'MapSeries': { max: 1 }, 'State': { max: 1 }, 'State1Min': { max: 1 }, 'State1Max': { max: 1 }, 'State2Min': { max: 1 }, 'State2Max': { max: 1 }, 'State3Min': { max: 1 }, 'State3Max': { max: 1 }, 'Saturation': { max: 1 }, 'SaturationMin': { max: 1 }, 'SaturationMax': { max: 1 } },
                 ],
                 categorical: {
                     categories: {
@@ -789,9 +809,9 @@ module powerbi.visuals {
          
                         data.imageData = DataViewObjects.getValue<string>(objects, synopticPanelProps.general.imageData);
 
-                        data.showAllShapes = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.general.showAllShapes, data.showAllShapes);
-                        data.showAllAreas = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.general.showAllAreas, data.showAllAreas);
-                        data.showAreasLabels = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.general.showAreasLabels, data.showAreasLabels);
+                        data.showAllShapes = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataAreas.showAllShapes, data.showAllShapes);
+                        data.showAllAreas = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataAreas.showAllAreas, data.showAllAreas);
+                        data.showAreasLabels = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataAreas.showAreasLabels, data.showAreasLabels);
                     }
                 }
 
@@ -1227,7 +1247,7 @@ module powerbi.visuals {
                                     labelText = dataLabelUtils.getLabelFormattedText(dataPoint.measure, polyRect.width - (padding * 2), dataPoint.labelFormatString, measureFormatter);
 
                                     //TODO Power BI Bug?
-                                    if (labelText === '') labelText = dataPoint.measure;
+                                    if (labelText === '') labelText = String(dataPoint.measure);
 
                                 } else {
                                     labelText = (area.title ? area.title : dataPoint.label); //dataLabelUtils.getLabelFormattedText(dataPoint.label, polyWidth - (padding * 2));
@@ -1385,7 +1405,7 @@ module powerbi.visuals {
 
         private persistData(): void {
             var properties: any = {};
-            properties.imageData = (this.data.imageData ? this.data.imageData : '');
+            properties.imageData = (this.data.imageData ? String(this.data.imageData) : '');
 
             this.host.persistProperties({
 				merge: [{
@@ -1404,10 +1424,10 @@ module powerbi.visuals {
                 this.data = SynopticPanelBySQLBI.getDefaultData();
 
             switch (options.objectName) {
-                case 'general':
+                case 'dataAreas':
 
                     enumeration.pushInstance({
-                        objectName: 'general',
+                        objectName: 'dataAreas',
                         selector: null,
                         properties: {
                             showAllShapes: this.data.showAllShapes
@@ -1415,7 +1435,7 @@ module powerbi.visuals {
                     });
 
                     enumeration.pushInstance({
-                        objectName: 'general',
+                        objectName: 'dataAreas',
                         selector: null,
                         properties: {
                             showAllAreas: (this.data.showAllShapes ? this.data.showAllAreas : false),
@@ -1423,39 +1443,20 @@ module powerbi.visuals {
                         },
                     });
 
-                   
-
-                    /*for (var i = 0; i < this.data.dataPoints.length; i++) {
-                        var dataPoint = this.data.dataPoints[i];
-                        enumeration.pushInstance({
-                            objectName: 'general',
-                            displayName: dataPoint.label,
-                            selector: ColorHelper.normalizeSelector(dataPoint.identity.getSelector()),
-                            properties: {
-                                fill: { solid: { color: dataPoint.color } }
-                            },
-                        });
+                    /*if (this.parsedAreas) {
+                        for (var a = 0; a < this.parsedAreas.length; a++) {
+                            var area = this.parsedAreas[a];
+                            enumeration.pushInstance({
+                                objectName: 'dataAreas',
+                                displayName: this.getLegalId(area.elementId.toLowerCase()),
+                                selector: null,
+                                properties: {
+                                    type: { text: true }
+                                },
+                            });
+                        }
                     }*/
 
-                    break;
-
-                case 'legend':
-                    var legendObjectProperties: DataViewObjects = { legend: this.data.legendObjectProperties };
-                        
-                    var show = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.show, this.legend.isVisible());
-                    var showTitle = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.showTitle, true);
-                    var titleText = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.titleText, this.data.legendData.title);
-
-                    enumeration.pushInstance({
-                        selector: null,
-                        objectName: 'legend',
-                        properties: {
-                            show: show,
-                            position: LegendPosition[this.legend.getOrientation()],
-                            showTitle: showTitle,
-                            titleText: titleText
-                        }
-                    });
                     break;
 
                 case 'dataPoint':
@@ -1548,6 +1549,25 @@ module powerbi.visuals {
                             dataMin: this.data.saturationState.dataMin + (this.data.saturationState.inBinding ? ' (bound)' : ''),
                             dataMax: this.data.saturationState.dataMax + (this.data.saturationState.inBinding ? ' (bound)' : ''),
                         },
+                    });
+                    break;
+
+                case 'legend':
+                    var legendObjectProperties: DataViewObjects = { legend: this.data.legendObjectProperties };
+
+                    var show = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.show, this.legend.isVisible());
+                    var showTitle = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.showTitle, true);
+                    var titleText = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.titleText, this.data.legendData.title);
+
+                    enumeration.pushInstance({
+                        selector: null,
+                        objectName: 'legend',
+                        properties: {
+                            show: show,
+                            position: LegendPosition[this.legend.getOrientation()],
+                            showTitle: showTitle,
+                            titleText: titleText
+                        }
                     });
                     break;
             }
@@ -1647,7 +1667,7 @@ module powerbi.visuals {
                 if (this.mapSeries) {
                     for (var ma = 0; ma < this.mapSeries.values.length; ma++) {
                         var map = this.mapSeries.values[ma];
-                        if (map && this.boundMaps.indexOf(map) == -1)
+                        if (map && this.boundMaps.indexOf(map) == -1 && SynopticPanelBySQLBI.isValidURL(map))
                             this.boundMaps.push(map);
                     }
                 }
