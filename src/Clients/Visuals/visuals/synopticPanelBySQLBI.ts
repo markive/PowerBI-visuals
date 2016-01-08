@@ -1,6 +1,6 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
- *  v1.1.9
+ *  v1.2.0
  *  The Synoptic Panel connects areas in a picture with attributes in the data model, coloring each area with a state (red/yellow green) or with a saturation of a color related to the value of a measure. Starting from any image, you draw custom areas using https://synoptic.design, which generates a SVG file you import in the Synoptic Panel. You can visualize data over a map, a planimetry, a diagram, a flow chart.
  * 
  *  Contact info@sqlbi.com
@@ -191,6 +191,7 @@ module powerbi.visuals {
         private legend: ILegend;
         private element: JQuery;
         private toolbar: JQuery;
+        private gallery: JQuery;
         private boundMapsCombo: JQuery;
         private selectedBoundMapIndex: number;
         private lastBoundMap: string;
@@ -544,6 +545,18 @@ module powerbi.visuals {
             this.galleryRetreiving = false;
             this.gallerySubmissions = {};
 
+            var self = this;
+            this.element.on('mouseout', function () {
+                if (self.toolbar && !self.toolbar.is('.huge')) {  
+                    if (self.gallery && !self.gallery.is(':visible'))
+                        self.toolbar.hide();
+                }
+            });
+            this.element.on('mouseover', function () {
+                if (self.toolbar)
+                    self.toolbar.show();
+            });
+
             this.data = {
                 dataPoints: [],
                 legendData: { title: '', dataPoints: [] },
@@ -559,93 +572,89 @@ module powerbi.visuals {
         public setToolbar(showToolbar) {
 
             var self = this;
-            var isOnline: boolean = (document.location.href.indexOf("http") > -1);
+            //var isOnline: boolean = (document.location.href.indexOf("http") > -1);
             var toolbar: JQuery;
+            var gallery: JQuery;
             var loader: string = '<div class="powerbi-spinner"><div class="modernCirleSpinner ng-scope"><i class="glyphicon pbi-spinner ng-scope"></i></div></div>';
 
             var toggleGallery = function (showGallery) {
                 if (showGallery) {
                     toolbar.find('.gallery').addClass('active');
-                    toolbar.animate({ height: 320 }, 300, function () {
 
-                        var gallery = toolbar.find('.gallery-list');
-                        gallery.show();
+                    self.gallery.height(self.element.height());
 
-                        if (!self.galleryHTML) {
+                    if (!self.galleryHTML) {
 
-                            if (!self.galleryRetreiving) {
-                                self.galleryRetreiving = true;
-                                gallery.html(loader);
+                        self.gallery.show();
 
-                                $.getJSON(SynopticPanelBySQLBI.GalleryFolders, function (d) {
-                                    if (self.galleryRetreiving) {
+                        if (!self.galleryRetreiving) {
+                            self.galleryRetreiving = true;
+                            self.gallery.html(loader);
 
-                                        var html = '';
+                            $.getJSON(SynopticPanelBySQLBI.GalleryFolders, function (d) {
+                                if (self.galleryRetreiving) {
+
+                                    var html = '';
                                         
-                                        html += '<div class="folders">';
-                                        for (var i = 0; i < d.folders.length; i++) {
-                                            var folder = d.folders[i];
-                                            html += '<a href="#" data-folder="' + folder.id + '"' + (i == 0 ? ' class="active"' : '') + '>' + folder.name + '</a> &nbsp; ';
-                                        }
-                                        html += '</div>';
-
-                                        $.getJSON(SynopticPanelBySQLBI.GalleryURL, function (d) {
-                                            if (self.galleryRetreiving) {
-                                                if (d.status === 'ok') {
-                                                    self.gallerySubmissions = {};
-                                                    html += '<ul>';
-                                                    for (var i = 0; i < d.posts.length; i++) {
-                                                        var post = d.posts[i];
-                                                        if (post.attachments.length > 0) {
-                                                            var title = post.title_plain;
-                                                            var thumb_url = post.attachments[0].url.replace('http:', 'https:');
-                                                            var folder = post.custom_fields.gallery_folder[0];
-                                                            var author_email = post.custom_fields.gallery_author_email[0];
-                                                            var author_name = post.custom_fields.gallery_author_name[0];
-                                                            var is_verified = post.custom_fields.gallery_verified[0];
-                                                            var author = (is_verified ? author_name + ' (' + author_email + ')' : (author_name === '' ? 'Anonymous' : author_name + ' (not verified)'));
-                                                            var content = $("<div/>").html(post.content).text();
-                                                            var alt = title + ' \n' + content + ' \nby ' + author;
-
-                                                            html += '<li class="folder' + folder + '"';
-                                                            if (folder != 0) html += ' style="display:none"';
-                                                            html += '><a href="#" id= "s_' + post.id + '" title= "' + alt + '"><div class="thumbnail_container"><div class="thumbnail" style= "background:#fff url(' + thumb_url + ') no-repeat center; background-size:contain"></div></div> <div class="ellipsis">' + title + '</div></a></li>';   
-                                                                   
-                                                            self.gallerySubmissions['s_' + post.id] = {
-                                                                map: post.custom_fields.gallery_map[0].replace('http:', 'https:')
-					                                        };
-                                                        }
-                                                    }
-                                                    html += '</ul>';
-                                                    gallery.html(html);
-                                                    self.galleryHTML = html;
-                                                }
-                                                self.galleryRetreiving = false;
-                                            }
-                                        });
+                                    html += '<div class="folders">';
+                                    for (var i = 0; i < d.folders.length; i++) {
+                                        var folder = d.folders[i];
+                                        html += '<a href="#" data-folder="' + folder.id + '"' + (i == 0 ? ' class="active"' : '') + '>' + folder.name + '</a> &nbsp; ';
                                     }
-                                });
-                            }
+                                    html += '</div>';
 
-                        } else {
-                            gallery.html(self.galleryHTML);
+                                    $.getJSON(SynopticPanelBySQLBI.GalleryURL, function (d) {
+                                        if (self.galleryRetreiving) {
+                                            if (d.status === 'ok') {
+                                                self.gallerySubmissions = {};
+                                                html += '<ul style="height:' + (self.gallery.height() - 60) + 'px">';
+                                                for (var i = 0; i < d.posts.length; i++) {
+                                                    var post = d.posts[i];
+                                                    if (post.attachments.length > 0) {
+                                                        var title = post.title_plain;
+                                                        var thumb_url = post.attachments[0].url.replace('http:', 'https:');
+                                                        var folder = post.custom_fields.gallery_folder[0];
+                                                        var author_email = post.custom_fields.gallery_author_email[0];
+                                                        var author_name = post.custom_fields.gallery_author_name[0];
+                                                        var is_verified = post.custom_fields.gallery_verified[0];
+                                                        var author = (is_verified ? author_name + ' (' + author_email + ')' : (author_name === '' ? 'Anonymous' : author_name + ' (not verified)'));
+                                                        var content = $("<div/>").html(post.content).text();
+                                                        var alt = title + ' \n' + content + ' \nby ' + author;
+
+                                                        html += '<li class="folder' + folder + '"';
+                                                        if (folder != 0) html += ' style="display:none"';
+                                                        html += '><a href="#" id= "s_' + post.id + '" title= "' + alt + '"><div class="thumbnail_container"><div class="thumbnail" style= "background:#fff url(' + thumb_url + ') no-repeat center; background-size:contain"></div></div> <div class="ellipsis">' + title + '</div></a></li>';   
+                                                                   
+                                                        self.gallerySubmissions['s_' + post.id] = {
+                                                            map: post.custom_fields.gallery_map[0].replace('http:', 'https:')
+					                                    };
+                                                    }
+                                                }
+                                                html += '</ul>';
+                                                self.gallery.html(html);
+                                                self.galleryHTML = html;
+                                            }
+                                            self.galleryRetreiving = false;
+                                        }
+                                    });
+                                }
+                            });
                         }
 
-                    });
+                    } else {
+                        self.gallery.html(self.galleryHTML);
+                        self.gallery.find('ul').height(self.gallery.height() - 60);
+                        self.gallery.show();
+                    }
 
-                    self.galleryInterval = setInterval(function () {
-                        if (!toolbar.is(':visible'))
-                            toggleGallery(false);
-                    }, 1000);
                 } else {
-                    toolbar.find('.gallery-list').css('opacity', 1).hide();
-                    toolbar.css('height', 'auto');
+                    self.gallery.css('opacity', 1).hide();
                     toolbar.find('.gallery').removeClass('active');
-                    clearInterval(self.galleryInterval);
                 }
             };
 
             if (this.toolbar) this.toolbar.remove();
+            if (this.gallery) this.gallery.remove();
 
             if (showToolbar) {
                 if (this.data.boundMaps.length > 0) {
@@ -655,13 +664,22 @@ module powerbi.visuals {
 
             if (showToolbar) {
 
-                var mapButton = '<span><button class="fileChoose mapChoose" title="Choose a local map file"><svg viewBox="0 0 15 12" width="20" height="16"><g><path fill="#ffffff" d="M4.51,3c-0.222,0 -0.394,0.069 -0.543,0.217c-0.148,0.148 -0.217,0.321 -0.217,0.544c0,0.208 0.069,0.374 0.217,0.521c0.287,0.288 0.759,0.308 1.066,0c0.149,-0.147 0.217,-0.313 0.217,-0.521c0,-0.223 -0.068,-0.396 -0.217,-0.543c-0.148,-0.149 -0.315,-0.218 -0.523,-0.218M4.51,5.25c-0.422,0 -0.783,-0.147 -1.073,-0.437c-0.289,-0.289 -0.437,-0.643 -0.437,-1.052c0,-0.423 0.148,-0.785 0.438,-1.075c0.568,-0.569 1.534,-0.589 2.125,0c0.29,0.291 0.437,0.652 0.437,1.075c0,0.408 -0.147,0.762 -0.437,1.052c-0.29,0.29 -0.644,0.437 -1.053,0.437M3.75,9l7.5,0l0,-2.084l-2.323,-2.221l-2.351,3.296l-1.283,-0.985l-1.543,1.853l0,0.141ZM12,9.75l-9,0l0,-1.163l2.177,-2.615l1.239,0.951l2.402,-3.368l3.182,3.041l0,3.154ZM0.75,11.25l13.5,0l0,-10.5l-13.5,0l0,10.5ZM15,12l-15,0l0,-12l15,0l0,12Z"/></g></svg> Select Map</button><input type="file" class="file" accept="image/*"></span> ';
+                var mapButton = '<span><button class="fileChoose mapChoose" title="Choose a local map file"><svg viewBox="0 0 15 12" width="25" height="20"><g><path fill="#000000" d="M4.51,3c-0.222,0 -0.394,0.069 -0.543,0.217c-0.148,0.148 -0.217,0.321 -0.217,0.544c0,0.208 0.069,0.374 0.217,0.521c0.287,0.288 0.759,0.308 1.066,0c0.149,-0.147 0.217,-0.313 0.217,-0.521c0,-0.223 -0.068,-0.396 -0.217,-0.543c-0.148,-0.149 -0.315,-0.218 -0.523,-0.218M4.51,5.25c-0.422,0 -0.783,-0.147 -1.073,-0.437c-0.289,-0.289 -0.437,-0.643 -0.437,-1.052c0,-0.423 0.148,-0.785 0.438,-1.075c0.568,-0.569 1.534,-0.589 2.125,0c0.29,0.291 0.437,0.652 0.437,1.075c0,0.408 -0.147,0.762 -0.437,1.052c-0.29,0.29 -0.644,0.437 -1.053,0.437M3.75,9l7.5,0l0,-2.084l-2.323,-2.221l-2.351,3.296l-1.283,-0.985l-1.543,1.853l0,0.141ZM12,9.75l-9,0l0,-1.163l2.177,-2.615l1.239,0.951l2.402,-3.368l3.182,3.041l0,3.154ZM0.75,11.25l13.5,0l0,-10.5l-13.5,0l0,10.5ZM15,12l-15,0l0,-12l15,0l0,12Z"/></g></svg> SELECT MAP</button><input type="file" class="file" accept="image/*"></span> ';
 
-                var galleryButton = '<span><button class="gallery" title="Choose an existing public map/areas"><svg viewBox="0 0 15 12" width="20" height="16"><g><path fill="#ffffff" d="M4.51,5.25c-0.222,0 -0.394,0.069 -0.543,0.217c-0.148,0.148 -0.217,0.321 -0.217,0.543c0,0.209 0.069,0.375 0.217,0.523c0.288,0.287 0.759,0.307 1.066,0c0.149,-0.148 0.217,-0.314 0.217,-0.523c0,-0.222 -0.068,-0.395 -0.217,-0.542c-0.148,-0.149 -0.315,-0.218 -0.523,-0.218M4.51,7.5c-0.422,0 -0.783,-0.147 -1.073,-0.437c-0.289,-0.289 -0.437,-0.643 -0.437,-1.053c0,-0.422 0.148,-0.784 0.438,-1.074c0.568,-0.569 1.534,-0.589 2.125,0c0.29,0.291 0.437,0.652 0.437,1.074c0,0.409 -0.147,0.763 -0.437,1.053c-0.29,0.29 -0.644,0.437 -1.053,0.437M6.701,9l4.549,0l0,-1.353l-1.574,-1.774l-1.681,2.678l-0.788,-0.594l-0.145,0.501l-0.361,0.542ZM12,9.75l-6.701,0l1.102,-1.653l0.347,-1.426l1.047,0.789l1.776,-2.833l2.429,2.735l0,2.388ZM0.75,11.25l13.5,0l0,-7.5l-13.5,0l0,7.5ZM15,12l-15,0l0,-9l15,0l0,9Z"/><rect x="1.5" y="1.5" width="12" height="0.75" fill="#ffffff"/><rect x="3.75" y="0" width="7.5" height="0.75" fill="#ffffff"/></g></svg> Gallery</button></span> ';
+                var smallMapButton = '<span><button class="fileChoose mapChoose" title="Select Map"><svg viewBox="0 0 15 12" width="20" height="16"><g><path fill="#797979" d="M4.51,3c-0.222,0 -0.394,0.069 -0.543,0.217c-0.148,0.148 -0.217,0.321 -0.217,0.544c0,0.208 0.069,0.374 0.217,0.521c0.287,0.288 0.759,0.308 1.066,0c0.149,-0.147 0.217,-0.313 0.217,-0.521c0,-0.223 -0.068,-0.396 -0.217,-0.543c-0.148,-0.149 -0.315,-0.218 -0.523,-0.218M4.51,5.25c-0.422,0 -0.783,-0.147 -1.073,-0.437c-0.289,-0.289 -0.437,-0.643 -0.437,-1.052c0,-0.423 0.148,-0.785 0.438,-1.075c0.568,-0.569 1.534,-0.589 2.125,0c0.29,0.291 0.437,0.652 0.437,1.075c0,0.408 -0.147,0.762 -0.437,1.052c-0.29,0.29 -0.644,0.437 -1.053,0.437M3.75,9l7.5,0l0,-2.084l-2.323,-2.221l-2.351,3.296l-1.283,-0.985l-1.543,1.853l0,0.141ZM12,9.75l-9,0l0,-1.163l2.177,-2.615l1.239,0.951l2.402,-3.368l3.182,3.041l0,3.154ZM0.75,11.25l13.5,0l0,-10.5l-13.5,0l0,10.5ZM15,12l-15,0l0,-12l15,0l0,12Z"/></g></svg></button><input type="file" class="file" accept="image/*"></span>';
 
-                var designerButton = '<span><button class="designer" title="Go to ' + SynopticPanelBySQLBI.DesignerURL+ '"><svg width="16" height="16" viewBox="0 0 16 16"><g><path fill="#ffffff" d="M1.134,12.144l-1.134,3.856l3.856,-1.135l10.124,-10.124l-2.722,-2.722l-10.124,10.125ZM3.348,14.012l-1.007,0.296c-0.059,-0.164 -0.153,-0.319 -0.285,-0.451c-0.105,-0.105 -0.225,-0.186 -0.353,-0.244l0.283,-0.962l9.271,-9.271l1.361,1.362l-9.27,9.27Z"/><path fill="#ffffff" d="M15.625,1.282l-0.907,-0.907c-0.242,-0.242 -0.565,-0.375 -0.907,-0.375c-0.343,0 -0.665,0.133 -0.907,0.375l-0.879,0.879l0.68,0.68l0.879,-0.879c0.125,-0.125 0.329,-0.125 0.454,0l0.907,0.907c0.06,0.06 0.094,0.141 0.094,0.227c0,0.086 -0.033,0.166 -0.094,0.227l-0.879,0.879l0.68,0.68l0.878,-0.878c0.242,-0.242 0.376,-0.565 0.376,-0.907c0,-0.342 -0.133,-0.666 -0.375,-0.908Z"/></g></svg> Design</button></span> ';
+                var galleryButton = '<span><button class="gallery" title="Choose an existing public map/areas"><svg viewBox="0 0 15 12" width="25" height="20"><g><path fill="#000000" d="M4.51,5.25c-0.222,0 -0.394,0.069 -0.543,0.217c-0.148,0.148 -0.217,0.321 -0.217,0.543c0,0.209 0.069,0.375 0.217,0.523c0.288,0.287 0.759,0.307 1.066,0c0.149,-0.148 0.217,-0.314 0.217,-0.523c0,-0.222 -0.068,-0.395 -0.217,-0.542c-0.148,-0.149 -0.315,-0.218 -0.523,-0.218M4.51,7.5c-0.422,0 -0.783,-0.147 -1.073,-0.437c-0.289,-0.289 -0.437,-0.643 -0.437,-1.053c0,-0.422 0.148,-0.784 0.438,-1.074c0.568,-0.569 1.534,-0.589 2.125,0c0.29,0.291 0.437,0.652 0.437,1.074c0,0.409 -0.147,0.763 -0.437,1.053c-0.29,0.29 -0.644,0.437 -1.053,0.437M6.701,9l4.549,0l0,-1.353l-1.574,-1.774l-1.681,2.678l-0.788,-0.594l-0.145,0.501l-0.361,0.542ZM12,9.75l-6.701,0l1.102,-1.653l0.347,-1.426l1.047,0.789l1.776,-2.833l2.429,2.735l0,2.388ZM0.75,11.25l13.5,0l0,-7.5l-13.5,0l0,7.5ZM15,12l-15,0l0,-9l15,0l0,9Z"/><rect x="1.5" y="1.5" width="12" height="0.75" fill="#000000"/><rect x="3.75" y="0" width="7.5" height="0.75" fill="#000000"/></g></svg> GALLERY</button></span> ';
 
-                toolbar = $('<div class="synopticToolbar unselectable toolbar ql-toolbar">' + mapButton + ' &nbsp; ' + galleryButton + (isOnline ? designerButton : '') + '<div class="gallery-list"></div></div>');
+                var smallGalleryButton = '<span><button class="gallery" title="Gallery"><svg viewBox="0 0 15 12" width="20" height="16"><g><path fill="#797979" d="M4.51,5.25c-0.222,0 -0.394,0.069 -0.543,0.217c-0.148,0.148 -0.217,0.321 -0.217,0.543c0,0.209 0.069,0.375 0.217,0.523c0.288,0.287 0.759,0.307 1.066,0c0.149,-0.148 0.217,-0.314 0.217,-0.523c0,-0.222 -0.068,-0.395 -0.217,-0.542c-0.148,-0.149 -0.315,-0.218 -0.523,-0.218M4.51,7.5c-0.422,0 -0.783,-0.147 -1.073,-0.437c-0.289,-0.289 -0.437,-0.643 -0.437,-1.053c0,-0.422 0.148,-0.784 0.438,-1.074c0.568,-0.569 1.534,-0.589 2.125,0c0.29,0.291 0.437,0.652 0.437,1.074c0,0.409 -0.147,0.763 -0.437,1.053c-0.29,0.29 -0.644,0.437 -1.053,0.437M6.701,9l4.549,0l0,-1.353l-1.574,-1.774l-1.681,2.678l-0.788,-0.594l-0.145,0.501l-0.361,0.542ZM12,9.75l-6.701,0l1.102,-1.653l0.347,-1.426l1.047,0.789l1.776,-2.833l2.429,2.735l0,2.388ZM0.75,11.25l13.5,0l0,-7.5l-13.5,0l0,7.5ZM15,12l-15,0l0,-9l15,0l0,9Z"/><rect x="1.5" y="1.5" width="12" height="0.75" fill="#797979"/><rect x="3.75" y="0" width="7.5" height="0.75" fill="#797979"/></g></svg></button></span>';
+            
+
+                if (this.data.imageData) {
+                    //Small buttons
+                    toolbar = $('<div class="synopticToolbar unselectable" style="display:none">' + smallMapButton + smallGalleryButton + '</div>');
+                } else {
+                    //Large buttons
+                    toolbar = $('<div class="synopticToolbar huge unselectable">' + mapButton + '<br>' + galleryButton + '<br><div class="designer">Design your maps at<br><a href="' + SynopticPanelBySQLBI.DesignerURL + '?utm_source=powerbi&amp;utm_medium=online&amp;utm_campaign=' + SynopticPanelBySQLBI.ClassName + '">' + SynopticPanelBySQLBI.DesignerURL + '</a></div></div>');
+                }
 
                 toolbar.find('.fileChoose').on('click', function (e) {
                     e.preventDefault();
@@ -693,29 +711,35 @@ module powerbi.visuals {
                         };
                     }
                 });
-                toolbar.find('.designer').on('click', function (e) {
+                /*toolbar.find('.designer').on('click', function (e) {
                     e.preventDefault();
                     toggleGallery(false);
                     window.open(SynopticPanelBySQLBI.DesignerURL + '?utm_source=powerbi&amp;utm_medium=online&amp;utm_campaign=' + SynopticPanelBySQLBI.ClassName);
-                });
+                });*/
 
                 toolbar.find('.gallery').on('click', function (e) {
                     e.preventDefault();
                     toggleGallery(!$(this).hasClass('active'));
                 });
 
-                toolbar.find('.gallery-list').on('click', '.folders a', function (e) {
+                this.toolbar = toolbar;
+                this.element.append(toolbar);
+       
+                gallery = $('<div class="gallery-list"></div>');
+                if (!this.data.imageData) gallery.addClass('huge');
+
+                gallery.on('click', '.folders a', function (e) {
                     e.preventDefault();
 
                     var folder = $(this).data('folder');
-                    toolbar.find('.gallery-list li').not('.folder' + folder).hide();
-                    toolbar.find('.gallery-list li.folder' + folder).show();
-                    toolbar.find('.gallery-list .folders a').not(this).removeClass('active');
+                    gallery.find('li').not('.folder' + folder).hide();
+                    gallery.find('li.folder' + folder).show();
+                    gallery.find('.folders a').not(this).removeClass('active');
                     $(this).addClass('active');
       
                 });
 
-                toolbar.find('.gallery-list').on('click', 'ul a', function (e) {
+                gallery.on('click', 'ul a', function (e) {
                     e.preventDefault();
 
                     if ((!self.data.imageData) || confirm('The current map will be changed. \nAre you sure to continue?')) {
@@ -730,17 +754,19 @@ module powerbi.visuals {
                         self.persistData();
                         self.renderMap();
                         toggleGallery(false);
-                        
+
                     }
 
                 });
 
-                this.toolbar = toolbar;
-                this.host.setToolbar(toolbar);
+                this.gallery = gallery;
+                this.element.append(gallery);
+
+                //this.host.setToolbar(toolbar);
 
             } else {
-
-                this.host.setToolbar(null);
+                
+                //this.host.setToolbar(null);
             }
 
             this.setBoundMapsCombo();

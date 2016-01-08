@@ -9,12 +9,6 @@ The Microsoft Power BI visuals project provides high quality data visualizations
 
 The Synoptic Panel connects areas in a picture with attributes in the data model, coloring each area with a state (red/yellow/green) or with a saturation of a color related to the value of a measure. Starting from any image, you draw custom areas using https://synoptic.design, which generates a SVG file you import in the Synoptic Panel. You can visualize data over a map, a planimetry, a diagram, a flow chart.
 
-**Last updates:**
-
-- Now accept SVG file only (and you don't need to submit separate areas and map files anymore): if you have a SVG just import it, if you have JPG/PNG images, use https://synoptic.design to convert it
-- Bind maps/areas to your data
-- Share your maps in the Synoptic Designer Gallery and import directly from the visual
-
 http://www.sqlbi.com/tv/synoptic-panel-for-power-bi/
 
 ![alt tag](src/Clients/Visuals/visuals/images/synopticPanel-StoreScreenshot.png)
