@@ -1890,32 +1890,41 @@ div.ql-toolbar {
 .synopticPanel .label { }
 .synopticCombo { position:absolute; top:0; width:100%; text-align:right; z-index: 999; }
     .synopticCombo select {max-width:50%; font-size:12px}
-.synopticToolbar {   }
-    .synopticToolbar .powerbi-spinner { position: absolute; left: 50%; margin-left: -18px; top: 50%; margin-top: -10px;}
-    .synopticToolbar .gallery-list {display:none; width:260px}
+.synopticToolbar { position: absolute; top:0; right:0;  }
+    .synopticToolbar.huge {position: absolute; top: 50%; margin-top: -17.5%; left: 0; margin-left:0; width: 100%; text-align:center }
+    
 
-        .synopticToolbar .gallery-list .folders {padding:10px; text-align:center}
-            .synopticToolbar .gallery-list .folders a {text-decoration:none; color:#fff; font-size:12px}
-            .synopticToolbar .gallery-list .folders a.active, .synopticToolbar .gallery-list .folders a:hover {color:#f2c80e}
+    .gallery-list {display:none; width:98%; position:absolute; top:28px;
+    left: 0; background: #333; height: 260px; box-shadow: 1px 1px 5px 1px rgba(0,0,0,.3); padding: 5px}
+        .gallery-list.huge {top:0}
+        .gallery-list .powerbi-spinner { position: absolute; left: 50%; margin-left: -18px; top: 50%; margin-top: -10px;}
+        .gallery-list .folders {padding:5px 10px; text-align:center}
+            .gallery-list .folders a {text-decoration:none; color:#fff; font-size:12px; text-transform:uppercase}
+            .gallery-list .folders a.active, .gallery-list .folders a:hover {color:#f2c80e}
 
-        .synopticToolbar .gallery-list ul {padding:0; margin:10px 0 0 0; overflow-y:auto; height:210px}
-        .synopticToolbar .gallery-list li {list-style:none; float:left; margin:5px; padding:5px; width:114px; text-align:center  }
+        .gallery-list ul {padding:0; margin:10px 0 0 0; overflow-y:auto; height:210px}
+        .gallery-list li {list-style:none; float:left; margin:5px; padding:5px; width:114px; text-align:center  }
             
-            .synopticToolbar .gallery-list li a, .synopticToolbar .gallery-list li a:active, .synopticToolbar .gallery-list li a:visited {color:#fff; text-decoration:none;}
-            .synopticToolbar .gallery-list li a:hover {color:#f2c80e}
+            .gallery-list li a, .gallery-list li a:active, .gallery-list li a:visited {color:#fff; text-decoration:none; font-weight:600}
+            .gallery-list li a:hover {color:#f2c80e}
 
-           .synopticToolbar .gallery-list li .thumbnail_container {background:#fff; border:3px solid #fff; padding:5px; width:100px; margin:0 0 3px 0}
-            .synopticToolbar .gallery-list li .thumbnail {  background:#fff; height:60px }
+           .gallery-list li .thumbnail_container {background:#fff; border:3px solid #fff; padding:5px; width:100px; margin:0 0 3px 0}
+            .gallery-list li .thumbnail {  background:#fff; height:60px }
 
-                .synopticToolbar .gallery-list li a:hover .thumbnail_container, .synopticToolbar .gallery-list li .thumbnail_container:hover { border:3px solid #f2c80e;  } 
-
-            .synopticToolbar .gallery-list li .ellipsis { text-overflow: ellipsis;  white-space: nowrap; overflow: hidden; }
+                .gallery-list li a:hover .thumbnail_container, .gallery-list li .thumbnail_container:hover { border:3px solid #f2c80e;  } 
+            .gallery-list li .ellipsis { text-overflow: ellipsis;  white-space: nowrap; overflow: hidden; }
 
     .synopticToolbar .file { visibility:hidden; height:1px; width:1px; }
-    .synopticToolbar button { margin:0 0 0 10px; padding:0 7px 0 5px !important; background:none; border:0; font-weight: normal !important; 
-          color: #fff; vertical-align: middle; font-size:14px; line-height:28px }
+    .synopticToolbar .designer {margin:10px 0; font-size:12px; line-height:14px; color:#888; }
+        .synopticToolbar .designer a {color:#000; font-weight:600; text-decoration:none}
+        .synopticToolbar .designer a:hover {color:#f2c80e}
+     .synopticToolbar button { background:#fff; margin:0 0 0 10px; padding:4px !important; background:none; border:0; font-weight: normal !important; 
+          color: #000; vertical-align: middle; line-height:0 }
+        .synopticToolbar.huge button {padding:2px 4px !important; font-size:15px; line-height:28px; width:125px; text-align:left}
         .synopticToolbar button:first-child {margin-left:0}
-        .synopticToolbar button svg { display:inline-block; margin:5px 2px 0 0; vertical-align: top; }
+        .synopticToolbar button svg { display:inline-block; margin:0;  vertical-align: top; }
+            .synopticToolbar.huge button svg {margin:4px 2px 0 0;}
+            
             .synopticToolbar button:hover, .synopticToolbar button.active {background:#f2c80e; color:#000}
                 .synopticToolbar button.disabled:hover, .synopticToolbar button.disabled {background:none; color:#fff; opacity:0.5} 
             .synopticToolbar button:hover path, .synopticToolbar button.active path, .synopticToolbar button:hover rect, .synopticToolbar button.active rect {fill:#000}
