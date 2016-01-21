@@ -1,6 +1,6 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
- *  v1.2.0
+ *  v1.2.1
  *  The Synoptic Panel connects areas in a picture with attributes in the data model, coloring each area with a state (red/yellow green) or with a saturation of a color related to the value of a measure. Starting from any image, you draw custom areas using https://synoptic.design, which generates a SVG file you import in the Synoptic Panel. You can visualize data over a map, a planimetry, a diagram, a flow chart.
  * 
  *  Contact info@sqlbi.com
@@ -539,7 +539,7 @@ module powerbi.visuals {
             this.colors = this.style.colorPalette.dataColors;
             this.interactivity = options.interactivity;
             this.isInteractive = options.interactivity && options.interactivity.isInteractiveLegend;
-            this.inEditingMode = (this.host.getViewMode() === ViewMode.Edit);
+            this.inEditingMode = (this.host.getViewMode() === 1);
             this.interactivityService = createInteractivityService(this.host);
             this.legend = createLegend(this.element, this.isInteractive, this.interactivityService, true);
             this.galleryRetreiving = false;
@@ -878,7 +878,7 @@ module powerbi.visuals {
         }
 
         public onViewModeChanged(viewMode: ViewMode): void {
-            this.inEditingMode = (viewMode === ViewMode.Edit);
+            this.inEditingMode = (viewMode === 1);
             this.setToolbar(this.inEditingMode);
         }
 
@@ -886,7 +886,7 @@ module powerbi.visuals {
         public update(options: VisualUpdateOptions) {
             if (!options.dataViews || !options.dataViews[0]) return;
 
-            this.inEditingMode = (this.host.getViewMode() === ViewMode.Edit);
+            this.inEditingMode = (this.host.getViewMode() === 1);
 
             var dataView = this.dataView = options.dataViews[0];
             var currentViewport = this.currentViewport = options.viewport;
