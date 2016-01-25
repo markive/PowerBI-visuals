@@ -1,6 +1,6 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
- *  v1.2.1
+ *  v1.2.2
  *  The Synoptic Panel connects areas in a picture with attributes in the data model, coloring each area with a state (red/yellow green) or with a saturation of a color related to the value of a measure. Starting from any image, you draw custom areas using https://synoptic.design, which generates a SVG file you import in the Synoptic Panel. You can visualize data over a map, a planimetry, a diagram, a flow chart.
  * 
  *  Contact info@sqlbi.com
@@ -1011,10 +1011,10 @@ module powerbi.visuals {
                             if (!self.isRecognizedSVGShape(this.tagName))
                                 return;
 
-                            if (this.tagName.toLowerCase() === 'g') {
+                            /*if (this.tagName.toLowerCase() === 'g') {
                                 if (el.selectAll("[id]")[0].length > 0)
                                     return;
-                            }
+                            }*/
                             if (el.classed('excluded')) return;
                             var title = this.getAttribute('title');
                             var name = self.getSVGName(this);
