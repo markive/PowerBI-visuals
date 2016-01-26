@@ -1,6 +1,6 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
- *  v1.2.3
+ *  v1.2.4
  *  The Synoptic Panel connects areas in a picture with attributes in the data model, coloring each area with a state (red/yellow green) or with a saturation of a color related to the value of a measure. Starting from any image, you draw custom areas using https://synoptic.design, which generates a SVG file you import in the Synoptic Panel. You can visualize data over a map, a planimetry, a diagram, a flow chart.
  * 
  *  Contact info@sqlbi.com
@@ -66,6 +66,7 @@ module powerbi.visuals {
         dataState3?: SynopticPanelBySQLBIState;
         saturationState?: SynopticPanelBySQLBIState;
         imageData?: string;
+        colorize?: boolean;
         showAllShapes?: boolean;
         showAllAreas?: boolean;
         showAreasLabels?: boolean;
@@ -118,6 +119,7 @@ module powerbi.visuals {
             showAreasLabels: <DataViewObjectPropertyIdentifier>{ objectName: 'dataAreas', propertyName: 'showAreasLabels' },
         },
         dataPoint: {
+            colorize: <DataViewObjectPropertyIdentifier>{ objectName: 'dataPoint', propertyName: 'colorize' },
             defaultColor: <DataViewObjectPropertyIdentifier>{ objectName: 'dataPoint', propertyName: 'defaultColor' },
             fill: <DataViewObjectPropertyIdentifier>{ objectName: 'dataPoint', propertyName: 'fill' },
             showAllDataPoints: <DataViewObjectPropertyIdentifier>{ objectName: 'dataPoint', propertyName: 'showAllDataPoints' },
@@ -223,6 +225,7 @@ module powerbi.visuals {
                 legendData: { title: '', dataPoints: [] },
                 hasHighlights: false,
                 dataLabelsSettings: dataLabelUtils.getDefaultLabelSettings(),
+                colorize: true,
                 showAllShapes: true,
                 showAllAreas: false,
                 showAreasLabels: false,
@@ -358,8 +361,12 @@ module powerbi.visuals {
                     },
                 },
                 dataPoint: {
-                    displayName: 'Colors',
+                    displayName: 'Matched areas',
                     properties: {
+                        colorize: {
+                            displayName: 'Colorize',
+                            type: { bool: true }
+                        },
                         defaultColor: {
                             displayName: 'Default color',
                             type: { fill: { solid: { color: true } } }
@@ -811,6 +818,8 @@ module powerbi.visuals {
 
                     if (objects) {
 
+                        data.colorize = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataPoint.colorize, data.colorize);
+
                         data.defaultDataPointColor = DataViewObjects.getFillColor(objects, synopticPanelProps.dataPoint.defaultColor, colors.getColorByIndex(0).value);
  
                         data.showAllDataPoints = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataPoint.showAllDataPoints, data.showAllDataPoints);
@@ -1230,26 +1239,30 @@ module powerbi.visuals {
 
                         g
                             .data([(found ? dataPoint : area.name)])
-                            .classed('poly', true)
-                            .style('fill', color)
-                            .style('fill-opacity', opacity)
-                            .style('stroke', color)
-                            .style('stroke-width', (isTextShape ? '0' : '2'))
-                            .style('stroke-opacity', opacity);
-                        
+                            .classed('poly', true);
+
+                        if (this.data.colorize) {
+                            g
+                                .style('fill', color)
+                                .style('fill-opacity', opacity)
+                                .style('stroke', color)
+                                .style('stroke-width', (isTextShape ? '0' : '2'))
+                                .style('stroke-opacity', opacity);
+
+                            if (isG) {
+                                g.selectAll('.excluded').each(function (d, i) {
+                                    var el = d3.select(this);
+                                    el.style('fill', null)
+                                      .style('fill-opacity', null)
+                                      .style('stroke', null)
+                                      .style('stroke-width', null)
+                                      .style('stroke-opacity', null);
+                                });
+                            }
+                        }
+
                         if (found)
                             g.style('opacity', ColumnUtil.getFillOpacity(dataPoint.selected, dataPoint.highlightRatio > 0, false, this.data.hasHighlights))
-
-                        if (isG) {
-                            g.selectAll('.excluded').each(function (d, i) {
-                                var el = d3.select(this);
-                                el.style('fill', null)
-                                  .style('fill-opacity', null)
-                                  .style('stroke', null)
-                                  .style('stroke-width', null)
-                                  .style('stroke-opacity', null);
-                            });
-                        } 
 
                         var polyRect: SVGRect = g[0][0].getBBox();
 
@@ -1498,18 +1511,13 @@ module powerbi.visuals {
                     break;
 
                 case 'dataPoint':
-                    enumeration.pushInstance({
-                        objectName: 'dataPoint',
-                        selector: null,
-                        properties: {
-                            defaultColor: { solid: { color: this.data.defaultDataPointColor || this.colors.getColorByIndex(0).value } }
-                        },
-                    });
 
                     enumeration.pushInstance({
                         objectName: 'dataPoint',
                         selector: null,
                         properties: {
+                            colorize: this.data.colorize,
+                            defaultColor: { solid: { color: this.data.defaultDataPointColor || this.colors.getColorByIndex(0).value } },
                             showAllDataPoints: this.data.showAllDataPoints
                         },
                     });
