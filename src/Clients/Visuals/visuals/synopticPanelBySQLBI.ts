@@ -1,6 +1,6 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
- *  v1.2.2
+ *  v1.2.3
  *  The Synoptic Panel connects areas in a picture with attributes in the data model, coloring each area with a state (red/yellow green) or with a saturation of a color related to the value of a measure. Starting from any image, you draw custom areas using https://synoptic.design, which generates a SVG file you import in the Synoptic Panel. You can visualize data over a map, a planimetry, a diagram, a flow chart.
  * 
  *  Contact info@sqlbi.com
@@ -1225,6 +1225,7 @@ module powerbi.visuals {
                         if (g.empty()) continue;
 
                         var isTextShape = (g[0][0].tagName.toLowerCase() === 'text');
+                        var isG = (g[0][0].tagName.toLowerCase() === 'g');
                         var drawLabel = !isTextShape;
 
                         g
@@ -1238,6 +1239,17 @@ module powerbi.visuals {
                         
                         if (found)
                             g.style('opacity', ColumnUtil.getFillOpacity(dataPoint.selected, dataPoint.highlightRatio > 0, false, this.data.hasHighlights))
+
+                        if (isG) {
+                            g.selectAll('.excluded').each(function (d, i) {
+                                var el = d3.select(this);
+                                el.style('fill', null)
+                                  .style('fill-opacity', null)
+                                  .style('stroke', null)
+                                  .style('stroke-width', null)
+                                  .style('stroke-opacity', null);
+                            });
+                        } 
 
                         var polyRect: SVGRect = g[0][0].getBBox();
 
