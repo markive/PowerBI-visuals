@@ -1,6 +1,6 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
- *  v1.2.4
+ *  v1.2.5
  *  The Synoptic Panel connects areas in a picture with attributes in the data model, coloring each area with a state (red/yellow green) or with a saturation of a color related to the value of a measure. Starting from any image, you draw custom areas using https://synoptic.design, which generates a SVG file you import in the Synoptic Panel. You can visualize data over a map, a planimetry, a diagram, a flow chart.
  * 
  *  Contact info@sqlbi.com
@@ -1295,10 +1295,12 @@ module powerbi.visuals {
 
                                     var measureFormatter = measureFormattersCache.getOrCreate(dataPoint.labelFormatString, this.data.dataLabelsSettings, alternativeScale);
 
-                                    labelText = dataLabelUtils.getLabelFormattedText(dataPoint.measure, polyRect.width - (padding * 2), dataPoint.labelFormatString, measureFormatter);
+                                    //labelText = dataLabelUtils.getLabelFormattedText(dataPoint.measure, polyRect.width - (padding * 2), dataPoint.labelFormatString, measureFormatter);
 
                                     //TODO Power BI Bug?
-                                    if (labelText === '') labelText = String(dataPoint.measure);
+                                    //if (labelText === '') labelText = String(dataPoint.measure);
+
+                                    labelText = measureFormatter.format(dataPoint.measure);
 
                                 } else {
                                     labelText = (area.title ? area.title : dataPoint.label); //dataLabelUtils.getLabelFormattedText(dataPoint.label, polyWidth - (padding * 2));
