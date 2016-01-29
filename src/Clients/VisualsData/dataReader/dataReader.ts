@@ -30,22 +30,72 @@ module powerbi.data {
     /** Represents a data reader. */
     export interface IDataReader {
         /** Executes a query, with a promise of completion.  The response object should be compatible with the transform implementation. */
-        execute? (options: DataReaderExecutionOptions): RejectablePromise2<DataReaderData, IClientError>;
+        execute?(options: DataReaderExecutionOptions): RejectablePromise2<DataReaderData, IClientError>;
 
         /** Transforms the given data into a DataView.  When this function is not specified, the data is put on a property on the DataView. */
-        transform? (obj: DataReaderData): DataReaderTransformResult;
+        transform?(obj: DataReaderData): DataReaderTransformResult;
 
         /** Stops all future communication and reject and pending communication  */
-        stopCommunication? (): void;
+        stopCommunication?(): void;
 
         /** Resumes communication which enables future requests */
-        resumeCommunication? (): void;
+        resumeCommunication?(): void;
 
         /** Clear cache */
-        clearCache? (): void;
+        clearCache?(dataSource: DataReaderDataSource): void;
 
         /** rewriteCacheEntries */
-        rewriteCacheEntries? (rewriter: DataReaderCacheRewriter): void;
+        rewriteCacheEntries?(dataSource: DataReaderDataSource, rewriter: DataReaderCacheRewriter): void;
+
+        /** Sets the result into the local cache */
+        setLocalCacheResult?(options: DataReaderExecutionOptions, dataAsObject: DataReaderData): void;
+    }
+
+    /** Represents a query generator. */
+    export interface IQueryGenerator {
+        /** Query generation function to convert a (prototype) SemanticQuery to a runnable query command. */
+        execute(options: QueryGeneratorOptions): QueryGeneratorResult;
+    }
+
+    export interface IFederatedConceptualSchemaReader {
+        /** Executes a request for conceptual schema with a promise of completion. */
+        execute(options: FederatedConceptualSchemaReaderOptions): IPromise<FederatedConceptualSchemaResponse>;
+
+        /** Transforms the given data into a FederatedConceptualSchema. */
+        transform(obj: FederatedConceptualSchemaResponse): SchemaReaderTransformResult;
+    }
+
+    /** Represents a custom data reader plugin, to be registered in the powerbi.data.plugins object. */
+    export interface IDataReaderPlugin {
+        /** The name of this plugin. */
+        name: string;
+        
+        /** Factory method for the IDataReader. */
+        reader(hostServices: IDataReaderHostServices): IDataReader;
+
+        /** Factory method for the IQueryGenerator. */
+        queryGenerator?(): IQueryGenerator;
+
+        /** Factory method for the IFederatedConceptualSchemaReader. */
+        schemaReader?(hostServices: IDataReaderHostServices): IFederatedConceptualSchemaReader;
+    }
+
+    export interface QueryGeneratorOptions {
+        query: SemanticQuery;
+        mappings: CompiledDataViewMapping[];
+        additionalProjections?: AdditionalQueryProjection[];
+        highlightFilter?: SemanticFilter;
+        restartToken?: RestartToken;
+    }
+
+    export interface AdditionalQueryProjection {
+        queryName: string;
+        selector: Selector;
+    }
+
+    export interface QueryGeneratorResult {
+        command: DataReaderQueryCommand;
+        splits?: DataViewSplitTransform[];
     }
 
     export interface DataReaderTransformResult {
@@ -56,15 +106,11 @@ module powerbi.data {
     }
 
     export interface RestartToken {
+        // This interface is intentionally empty, as plugins define their own data structure.
     }
 
-    /** Represents a custom data reader plugin, to be registered in the powerbi.data.plugins object. */
-    export interface IDataReaderPlugin {
-        /** The name of this plugin. */
-        name: string;
-        
-        /** Factory method for the IDataReader. */
-        create(hostServices: IDataReaderHostServices): IDataReader;
+    export interface DataReaderQueryCommand {
+        // This interface is intentionally empty, as plugins define their own data structure.
     }
 
     /** Represents a query command defined by an IDataReader. */
@@ -92,6 +138,37 @@ module powerbi.data {
         command: DataReaderCommand;
         allowCache?: boolean;
         cacheResponseOnServer?: boolean;
+    }
+
+    export interface FederatedConceptualSchemaReaderOptions {
+        dataSources: ConceptualSchemaReaderDataSource[];
+    }
+
+    export interface ConceptualSchemaReaderDataSource {
+        id: number;
+
+        /** Specifies the name used in Semantic Queries to reference this DataSource. */
+        name: string;
+    }
+
+    export interface FederatedConceptualSchemaResponse {
+        data: FederatedConceptualSchemaData;
+    }
+
+    export interface FederatedConceptualSchemaData {
+        // This interface is intentionally empty, as plugins define their own data structure.
+    }
+
+    export interface SchemaReaderTransformResult {
+        schema: FederatedConceptualSchema;
+        error?: SchemaReaderError;
+    }
+
+    // Defect 5858607, consider removing serviceError and only have IClientError to be more consistent with IDataProxy.
+    export interface SchemaReaderError {
+        requestId?: string;
+        serviceError?: ServiceError;
+        clientError: IClientError;
     }
 
     export interface IDataReaderHostServices {

@@ -38,11 +38,12 @@ module powerbi {
         single?: DataViewSingleMapping;
         tree?: DataViewTreeMapping;
         matrix?: DataViewMatrixMapping;
+        scriptResult?: DataViewScriptResultMapping;
     }
 
     /** Describes whether a particular mapping is fits the set of projections. */
     export interface DataViewMappingCondition {
-        [dataRole: string]: NumberRange;
+        [dataRole: string]: RoleCondition;
     }
 
     /** Describes a mapping which supports a data volume level. */
@@ -50,29 +51,20 @@ module powerbi {
         dataVolume?: number;
     }
 
-    export interface DataViewCategoricalMapping extends HasDataVolume {
-        categories?: DataViewRoleMappingWithReduction;
+    export interface DataViewCategoricalMapping extends HasDataVolume, HasReductionAlgorithm {
+        categories?: DataViewRoleMappingWithReduction | DataViewListRoleMappingWithReduction;
         values?: DataViewRoleMapping | DataViewGroupedRoleMapping | DataViewListRoleMapping;
 
         /** Specifies a constraint on the number of data rows supported by the visual. */
         rowCount?: AcceptabilityNumberRange;
+
         /** Indicates whether the data rows include empty groups  */
         includeEmptyGroups?: boolean;
-    }
-
-    export interface DataViewGroupingRoleMapping {
-        /** Indicates the role which is bound to this structure. */
-        role: string;
     }
 
     export interface DataViewSingleMapping {
         /** Indicates the role which is bound to this structure. */
         role: string;
-    }
-
-    export interface DataViewValuesRoleMapping {
-        /** Indicates the sequence of roles which are bound to this structure. */
-        roles: string[];
     }
 
     export interface DataViewTableMapping extends HasDataVolume {
@@ -82,21 +74,23 @@ module powerbi {
         rowCount?: AcceptabilityNumberRange;
     }
 
-    export interface DataViewTreeMapping {
-        nodes?: DataViewGroupingRoleMapping;
-	    values?: DataViewValuesRoleMapping;
-	    /** Specifies a constraint on the depth of the tree supported by the visual. */
+    export interface DataViewTreeMapping extends HasDataVolume {
+        nodes?: DataViewRoleForMappingWithReduction;
+        values?: DataViewRoleForMapping;
+
+        /** Specifies a constraint on the depth of the tree supported by the visual. */
 	    depth?: AcceptabilityNumberRange;
     }
 
     export interface DataViewMatrixMapping extends HasDataVolume {
-        rows?: DataViewRoleForMappingWithReduction;
+        rows?: DataViewRoleForMappingWithReduction | DataViewListRoleMappingWithReduction;
         columns?: DataViewRoleForMappingWithReduction;
-        values?: DataViewRoleForMapping;
+        values?: DataViewRoleForMapping | DataViewListRoleMapping;
     }
 
     /* tslint:disable:no-unused-expression */
     export type DataViewRoleMapping = DataViewRoleBindMapping | DataViewRoleForMapping;
+
     /* tslint: enable */
 
     export interface DataViewRoleBindMapping {
@@ -174,6 +168,7 @@ module powerbi {
     export interface AcceptabilityNumberRange {
         /** Specifies a preferred range of values for the constraint. */
         preferred?: NumberRange;
+
         /** Specifies a supported range of values for the constraint. Defaults to preferred if not specified. */
         supported?: NumberRange;
     }
@@ -182,5 +177,15 @@ module powerbi {
     export interface NumberRange {
         min?: number;
         max?: number;
+    }
+
+    export interface DataViewMappingScriptDefinition {
+        source: DataViewObjectPropertyIdentifier;
+        provider: DataViewObjectPropertyIdentifier;
+    }
+
+    export interface DataViewScriptResultMapping {
+        dataInput: DataViewMapping;
+        script: DataViewMappingScriptDefinition;
     }
 }

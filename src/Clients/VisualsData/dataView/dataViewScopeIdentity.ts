@@ -27,8 +27,7 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi {
-    import ArrayExtensions = jsCommon.ArrayExtensions;
-
+    
     /** Encapsulates the identity of a data scope in a DataView. */
     export interface DataViewScopeIdentity {
         /** Predicate expression that identifies the scope. */
@@ -58,22 +57,36 @@ module powerbi {
         }
 
         export function filterFromIdentity(identities: DataViewScopeIdentity[], isNot?: boolean): data.SemanticFilter {
-            if (ArrayExtensions.isUndefinedOrEmpty(identities))
+            if (_.isEmpty(identities))
                 return;
-
-            let expr: data.SQExpr;
-            for (let i = 0, len = identities.length; i < len; i++) {
-                let identity = identities[i];
-
-                expr = expr
-                    ? powerbi.data.SQExprBuilder.or(expr, identity.expr)
-                    : identity.expr;
+            
+            let exprs: data.SQExpr[] = [];
+            for (let identity of identities) {
+                exprs.push(identity.expr);
             }
 
-            if (expr && isNot)
-                expr = powerbi.data.SQExprBuilder.not(expr);
+            return filterFromExprs(exprs, isNot);
+        }
 
-            return powerbi.data.SemanticFilter.fromSQExpr(expr);
+        export function filterFromExprs(orExprs: data.SQExpr[], isNot?: boolean): data.SemanticFilter {
+            if (_.isEmpty(orExprs))
+                return;
+
+            let resultExpr: data.SQExpr;
+            for (let orExpr of orExprs) {
+                let inExpr = data.ScopeIdentityExtractor.getInExpr(orExpr);
+                if (resultExpr)
+                    resultExpr = data.SQExprBuilder.or(resultExpr, inExpr);
+                else
+                    resultExpr = inExpr || orExpr;
+            }
+            
+            if (resultExpr) {
+                if (isNot)
+                    resultExpr = powerbi.data.SQExprBuilder.not(resultExpr);
+            }
+
+            return powerbi.data.SemanticFilter.fromSQExpr(resultExpr);
         }
     }
 

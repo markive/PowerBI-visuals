@@ -36,6 +36,7 @@ cache:
 
 # scripts that run after cloning repository
 install:
+  - npm install -g gulp
   - npm install
 
 build_script:
@@ -46,9 +47,6 @@ build_script:
 #---------------------------------#
 
 test_script:
-  - gulp build:visuals_tests
-  - gulp install:jasmine
-  - gulp install:phantomjs
-  - gulp combine:all
-  - gulp copy:dependencies_visuals_tests
-  - gulp run:test
+  - gulp tslint:visuals
+  - gulp build:visualsTests
+  - gulp run:test:visuals

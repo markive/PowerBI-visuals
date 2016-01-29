@@ -81,6 +81,10 @@ module jsCommon {
             return StringExtensions.normalizeCase(a).indexOf(normalizedSearchString) === 0;
         }
 
+        export function startsWith(a: string, b: string): boolean {
+            return a.indexOf(b) === 0;
+        }
+
         /** Determines whether a string contains a specified substring (while ignoring case). */
         export function containsIgnoreCase(source: string, substring: string): boolean {
             if (source == null)
@@ -189,6 +193,39 @@ module jsCommon {
             return text.replace(new RegExp(pattern, 'gi'), textToReplace);
         }
 
+        export function ensureUniqueNames(names: string[]): string[] {
+            debug.assertValue(names, 'names');
+
+            let usedNames: { [name: string]: boolean } = {};
+
+            // Make sure we are giving fair chance for all columns to stay with their original name
+            // First we fill the used names map to contain all the original unique names from the list.
+            for (let name of names) {
+                usedNames[name] = false;
+            }
+
+            let uniqueNames: string[] = [];
+
+            // Now we go over all names and find a unique name for each
+            for (let name of names) {
+                let uniqueName = name;
+
+                // If the (original) column name is already taken lets try to find another name
+                if (usedNames[uniqueName]) {
+                    let counter = 0;
+                    // Find a name that is not already in the map
+                    while (usedNames[uniqueName] !== undefined) {
+                        uniqueName = name + "." + (++counter);
+                    }
+                }
+
+                uniqueNames.push(uniqueName);
+                usedNames[uniqueName] = true;
+            }
+
+            return uniqueNames;
+        }
+
         /**
          * Returns a name that is not specified in the values.
          */
@@ -248,6 +285,23 @@ module jsCommon {
         export function escapeStringForRegex(s: string): string {
             return s.replace(/([-()\[\]{}+?*.$\^|,:#<!\\])/g, '\\$1');
         }
+
+        /**
+         * Remove file name reserved characters <>:"/\|?* from input string.
+         */
+        export function normalizeFileName(fileName: string): string {   
+            debug.assertValue(fileName, 'fileName');         
+            return fileName.replace(/[\<\>\:"\/\\\|\?*]/g, '');
+        }
+
+        /**
+         * Similar to JSON.stringify, but strips away escape sequences so that the resulting
+         * string is human-readable (and parsable by JSON formatting/validating tools).
+         */
+        export function stringifyAsPrettyJSON(object: any): string {
+            //let specialCharacterRemover = (key: string, value: string) => value.replace(/[^\w\s]/gi, '');
+            return JSON.stringify(object /*, specialCharacterRemover*/);
+        }
     }
 
     /**
@@ -255,6 +309,12 @@ module jsCommon {
      */
     export interface TypedObject {
         __type: string;
+    }
+
+    export interface TextMatch {
+        start: number;
+        end: number;
+        text: string;
     }
 
     /** 
@@ -277,6 +337,7 @@ module jsCommon {
         public static Undefined = 'undefined';
 
         private static staticContentLocation: string = window.location.protocol + '//' + window.location.host;
+        private static urlRegex = /http[s]?:\/\/(\S)+/gi;
 
         /**
          * Ensures the specified value is not null or undefined. Throws a relevent exception if it is.
@@ -497,20 +558,6 @@ module jsCommon {
         }
 
         /**
-         * Generates a random 7 character string that is used as a connection group name.
-         * @returns A random connection group name.
-         */
-        public static generateConnectionGroupName(): string {
-            let name = "";
-            let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-            for (let i = 0; i < 7; i++)
-                name += possible.charAt(Math.floor(Math.random() * possible.length));
-
-            return name;
-        }
-
-        /**
          * Try extract a cookie from {@link document.cookie} identified by key.
          */
         public static getCookieValue(key: string): string {
@@ -663,8 +710,39 @@ module jsCommon {
          * @returns Whether the provided url is valid.
          */
         public static isValidUrl(url: string): boolean {
-            return !StringExtensions.isNullOrEmpty(url) &&
-                (StringExtensions.startsWithIgnoreCase(url, 'http://') || StringExtensions.startsWithIgnoreCase(url, 'https://'));
+            if (StringExtensions.isNullOrEmpty(url))
+                return false;
+
+            let match = RegExpExtensions.run(Utility.urlRegex, url);
+            return !!match && match.index === 0;
+        }
+
+        /**
+         * Finds all valid urls.
+         * @param text The text to search.
+         * @returns An array of ranges corresponding to the urls.
+         */
+        public static findAllValidUrls(text: string): TextMatch[] {
+            if (StringExtensions.isNullOrEmpty(text))
+                return [];
+
+            // Find all urls in the text.
+            // TODO: This could potentially be expensive, maybe include a cap here for text with many urls?
+            let urlRanges: TextMatch[] = [];
+            let matches: RegExpExecArray;
+            let start = 0;
+            while ((matches = RegExpExtensions.run(Utility.urlRegex, text, start)) !== null) {
+                let url = matches[0];
+                let end = matches.index + url.length;
+                urlRanges.push({
+                    start: matches.index,
+                    end: end,
+                    text: url,
+                });
+                start = end;
+            }
+
+            return urlRanges;
         }
         
         /**
@@ -979,7 +1057,7 @@ module jsCommon {
         }
     }
 
-    export module DeferUtility {        
+    export module DeferUtility {
         /**
          * Wraps a callback and returns a new function.
          * The function can be called many times but the callback

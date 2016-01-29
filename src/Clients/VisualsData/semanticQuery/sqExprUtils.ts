@@ -29,29 +29,15 @@
 module powerbi.data {
     import StringExtensions = jsCommon.StringExtensions;
 
-    module SQExprHierarchyToHierarchyLevelConverter {
-        export function convert(sqExpr: SQExpr, federatedSchema: FederatedConceptualSchema): SQExpr[] {
-            debug.assertValue(sqExpr, 'sqExpr');
-            debug.assertValue(federatedSchema, 'federatedSchema');
-
-            if (sqExpr instanceof SQHierarchyExpr) {
-                let hierarchyExpr = <SQHierarchyExpr>sqExpr;
-
-                let conceptualHierarcy = SQExprUtils.getConceptualHierarchy(hierarchyExpr, federatedSchema);
-                return _.map(conceptualHierarcy.levels, hierarchyLevel => SQExprBuilder.hierarchyLevel(sqExpr, hierarchyLevel.name));
-            }
-        }
-    }
-
     export module SQExprUtils {
         /** Returns an array of supported aggregates for a given expr and role. */
         export function getSupportedAggregates(
             expr: SQExpr,
-            isGroupingOnly: boolean,
             schema: FederatedConceptualSchema): QueryAggregateFunction[] {
             let emptyList: QueryAggregateFunction[] = [];
 
             let metadata = getMetadataForUnderlyingType(expr, schema);
+
             // don't use expr.validate as validate will be using this function and we end up in a recursive loop
             if (!metadata)
                 return emptyList;
@@ -66,10 +52,6 @@ module powerbi.data {
 
             // Cannot aggregate on model measures
             if (fieldKind === FieldKind.Measure)
-                return emptyList;
-
-            // Cannot aggregate grouping exprs
-            if (isGroupingOnly)
                 return emptyList;
 
             if (valueType.numeric || valueType.integer) {
@@ -89,6 +71,14 @@ module powerbi.data {
 
             debug.assertFail("Unexpected expr or role.");
             return emptyList;
+        }
+
+        export function isSupportedAggregate(
+            expr: SQExpr,
+            schema: FederatedConceptualSchema,
+            aggregate: QueryAggregateFunction): boolean {
+            let supportedAggregates = getSupportedAggregates(expr, schema);
+            return _.contains(supportedAggregates, aggregate);
         }
 
         export function indexOfExpr(items: SQExpr[], searchElement: SQExpr): number {
@@ -144,7 +134,26 @@ module powerbi.data {
             return expr.accept(IsMeasureVisitor.instance);
         }
 
+        /** Gets a value indicating whether the expr is an AnyValue or equals comparison to AnyValue*/
+        export function isAnyValue(expr: SQExpr): boolean {
+            debug.assertValue(expr, 'expr');
+
+            return expr.accept(IsAnyValueVisitor.instance);
+        }
+
+        /** Gets a value indicating whether the expr is a DefaultValue or equals comparison to DefaultValue*/
+        export function isDefaultValue(expr: SQExpr): boolean {
+            debug.assertValue(expr, 'expr');
+
+            return expr.accept(IsDefaultValueVisitor.instance);
+        }
+
         export function discourageAggregation(expr: SQExpr, schema: FederatedConceptualSchema): boolean {
+            let capabilities = getSchemaCapabilities(expr, schema);
+            return capabilities && capabilities.discourageQueryAggregateUsage;
+        }
+
+        export function getSchemaCapabilities(expr: SQExpr, schema: FederatedConceptualSchema): ConceptualCapabilities {
             debug.assertValue(expr, 'expr');
             debug.assertValue(schema, 'schema');
 
@@ -155,7 +164,7 @@ module powerbi.data {
             let fieldExprItem = FieldExprPattern.toFieldExprEntityItemPattern(field);
             let conceptualSchema = schema.schema(fieldExprItem.schema);
             if (conceptualSchema)
-                return conceptualSchema.capabilities && conceptualSchema.capabilities.discourageQueryAggregateUsage;
+                return conceptualSchema.capabilities;
         }
 
         export function getKpiStatus(expr: SQExpr, schema: FederatedConceptualSchema): SQExpr {
@@ -174,33 +183,17 @@ module powerbi.data {
             }
         }
 
-        export function getKpiStatusGraphic(expr: SQExpr, schema: FederatedConceptualSchema): string {
+        export function getKpiMetadata(expr: SQExpr, schema: FederatedConceptualSchema): DataViewKpiColumnMetadata {
             let property = expr.getConceptualProperty(schema);
             if (!property)
                 return;
 
-            if (property.measure &&
-                property.measure.kpi)
-                return property.measure.kpi.statusGraphic;
+            if (property.measure && property.measure.kpi)
+                return property.measure.kpi.statusMetadata;
 
-            let kpi = getKpiStatusProperty(expr, schema);
-            if (kpi)
-                return kpi.measure.kpi.statusGraphic;
-        }
-
-        export function getConceptualHierarchy(sqExpr: SQExpr, federatedSchema: FederatedConceptualSchema): ConceptualHierarchy {
-            if (sqExpr instanceof SQHierarchyExpr) {
-                let hierarchy = <SQHierarchyExpr>sqExpr;
-                let entityExpr = <SQEntityExpr>sqExpr.arg;
-                return federatedSchema
-                    .schema(entityExpr.schema)
-                    .findHierarchy(entityExpr.entity, hierarchy.hierarchy);
-            }
-        }
-
-        export function getExpr(schema, expr): SQExpr | SQExpr[] {
-            let exprs = SQExprHierarchyToHierarchyLevelConverter.convert(expr, schema);
-            return exprs || expr;
+            let kpiStatusProperty = getKpiStatusProperty(expr, schema);
+            if (kpiStatusProperty)
+                return kpiStatusProperty.kpi.measure.kpi.statusMetadata;
         }
 
         function getKpiStatusProperty(expr: SQExpr, schema: FederatedConceptualSchema): ConceptualProperty {
@@ -210,7 +203,7 @@ module powerbi.data {
 
             let kpi = property.kpi;
             if (kpi && kpi.measure.kpi.status === property)
-                return kpi;
+                return property;
         }
 
         function getMetadataForUnderlyingType(expr: SQExpr, schema: FederatedConceptualSchema): SQExprMetadata {
@@ -221,6 +214,87 @@ module powerbi.data {
                 metadata = expr.getMetadata(schema);
 
             return metadata;
+        }
+
+        export function getDefaultValue(fieldSQExpr: SQExpr, schema: FederatedConceptualSchema): SQConstantExpr {
+            if (!fieldSQExpr || !schema)
+                return;
+
+            let sqField = SQExprConverter.asFieldPattern(fieldSQExpr);
+            let column: FieldExprPropertyPattern = sqField.column;
+
+            if (column) {
+                if (schema.schema(column.schema) && sqField.column.name) {
+                    let property = schema.schema(column.schema).findProperty(column.entity, sqField.column.name);
+
+                    if (property && property.column)
+                        return property.column.defaultValue;
+                }
+            }
+            else {
+                let hierarchyLevelField: FieldExprHierarchyLevelPattern = sqField.hierarchyLevel;
+                if (hierarchyLevelField) {
+                    let fieldExprItem = FieldExprPattern.toFieldExprEntityItemPattern(sqField);
+                    let schemaName = fieldExprItem.schema;
+                    if (schema.schema(schemaName)) {
+                        let hierarchy = schema.schema(schemaName)
+                            .findHierarchy(fieldExprItem.entity, hierarchyLevelField.name);
+
+                        if (hierarchy) {
+                            let hierarchyLevel: ConceptualHierarchyLevel = hierarchy.levels.withName(hierarchyLevelField.level);
+                            if (hierarchyLevel && hierarchyLevel.column && hierarchyLevel.column.column)
+                                return hierarchyLevel.column.column.defaultValue;
+                        }
+                    }
+                }
+            }
+        }
+
+        export function getDefaultValues(fieldSQExprs: SQExpr[], schema: FederatedConceptualSchema): SQConstantExpr[] {
+            if (_.isEmpty(fieldSQExprs) || !schema)
+                return;
+            let result: SQConstantExpr[] = [];
+            for (let sqExpr of fieldSQExprs) {
+                let defaultValue = getDefaultValue(sqExpr, schema);
+                if (defaultValue)
+                    result.push(defaultValue);
+            }
+            return result;
+        }
+
+        /** Return compare or and expression for key value pairs. */
+        export function getDataViewScopeIdentityComparisonExpr(fieldsExpr: SQExpr[], values: SQConstantExpr[]): SQExpr {
+            debug.assert(fieldsExpr.length === values.length, "fileds and values need to be the same size");
+
+            let compareExprs: SQCompareExpr[] = [];
+            for (let i = 0; i < fieldsExpr.length; i++) {
+                compareExprs.push(SQExprBuilder.compare(QueryComparisonKind.Equal, fieldsExpr[i], values[i]));
+            }
+
+            if (_.isEmpty(compareExprs))
+                return;
+
+            let resultExpr: SQExpr;
+            for (let compareExpr of compareExprs) {
+                resultExpr = SQExprBuilder.and(resultExpr, compareExpr);
+            }
+
+            return resultExpr;
+        }
+
+        export function getActiveTablesNames(queryDefn: data.SemanticQuery): string[] {
+            let tables: string[] = [];
+            if (queryDefn) {
+                let selectedItems = queryDefn.from();
+                if (selectedItems !== undefined) {
+                    for (let key of selectedItems.keys()) {
+                        let entityObj = selectedItems.entity(key);
+                        if (tables.indexOf(entityObj.entity) < 0)
+                            tables.push(entityObj.entity);
+                    }
+                }
+            }
+            return tables;
         }
 
         class SQExprDefaultNameGenerator extends DefaultSQExprVisitorWithArg<string, string> {
@@ -242,6 +316,10 @@ module powerbi.data {
                 return QueryAggregateFunction[expr.func] + '(' + expr.arg.accept(this) + ')';
             }
 
+            public visitConstant(expr: SQConstantExpr): string {
+                return 'const';
+            }
+
             public visitDefault(expr: SQExpr, fallback: string): string {
                 return fallback || 'expr';
             }
@@ -255,6 +333,52 @@ module powerbi.data {
             }
 
             public visitAggr(expr: SQAggregationExpr): boolean {
+                return true;
+            }
+
+            public visitDefault(expr: SQExpr): boolean {
+                return false;
+            }
+        }
+
+        class IsDefaultValueVisitor extends DefaultSQExprVisitor<boolean> {
+            public static instance: IsDefaultValueVisitor = new IsDefaultValueVisitor();
+
+            public visitCompare(expr: SQCompareExpr): boolean {
+                if (expr.kind !== QueryComparisonKind.Equal)
+                    return false;
+
+                return expr.right.accept(this);
+            }
+
+            public visitAnd(expr: SQAndExpr): boolean {
+                return expr.left.accept(this) && expr.right.accept(this);
+            }
+
+            public visitDefaultValue(expr: SQDefaultValueExpr): boolean {
+                return true;
+            }
+
+            public visitDefault(expr: SQExpr): boolean {
+                return false;
+            }
+        }
+
+        class IsAnyValueVisitor extends DefaultSQExprVisitor<boolean> {
+            public static instance: IsAnyValueVisitor = new IsAnyValueVisitor();
+
+            public visitCompare(expr: SQCompareExpr): boolean {
+                if (expr.kind !== QueryComparisonKind.Equal)
+                    return false;
+
+                return expr.right.accept(this);
+            }
+
+            public visitAnd(expr: SQAndExpr): boolean {
+                return expr.left.accept(this) && expr.right.accept(this);
+            }
+
+            public visitAnyValue(expr: SQAnyValueExpr): boolean {
                 return true;
             }
 

@@ -27,51 +27,7 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi.visuals {
-    
-    export interface PlayBehaviorOptions extends ScatterBehaviorOptions {
-        data: PlayChartData;
-        dataViewCat?: powerbi.DataViewCategorical;
-        svg?: D3.Selection;
-        dataView?: powerbi.DataView;
-        renderTraceLine?: (options: PlayBehaviorOptions, selectedPoints: SelectableDataPoint[], shouldAnimate: boolean) => void;
-        labelsSelection: D3.Selection;
-    }
-
-    export class PlayChartWebBehavior implements IInteractiveBehavior {
-        private bubbles: D3.Selection;
-        private shouldEnableFill: boolean;
-        private options: PlayBehaviorOptions;
-
-        public bindEvents(options: PlayBehaviorOptions, selectionHandler: ISelectionHandler): void {
-            this.options = options;
-            if (options && options.dataPointsSelection) {
-                var bubbles = this.bubbles = options.dataPointsSelection;
-                var data = options.data;
-                this.shouldEnableFill = (!data.sizeRange || !data.sizeRange.min) && data.fillPoint;
-
-                bubbles.on('click', (d: SelectableDataPoint) => {
-                    selectionHandler.handleSelection(d, d3.event.ctrlKey);
-                });
-            }
-        }
-
-        public renderSelection(hasSelection: boolean): void {
-            var shouldEnableFill = this.shouldEnableFill;
-            if (this.bubbles) {
-                this.bubbles.style("fill-opacity", (d: PlayChartDataPoint) => (d.size != null || shouldEnableFill) ? PlayChart.getBubbleOpacity(d, hasSelection) : 0);
-                this.bubbles.style("stroke-opacity", (d: PlayChartDataPoint) => PlayChart.getBubbleOpacity(d, hasSelection));
-                if (this.options.labelsSelection)
-                    this.options.labelsSelection.style("opacity", (d: PlayChartDataPoint) => PlayChart.getBubbleOpacity(d, hasSelection));
-
-                let selectedPoints = this.bubbles.filter((d: PlayChartDataPoint) => d.selected);
-                if (selectedPoints && selectedPoints.data().length > 0 && this.options.renderTraceLine != null) {
-                    this.options.renderTraceLine(this.options, selectedPoints.data(), true);
-                }
-                else {
-                    this.options.svg.selectAll('.traceLine').remove();
-                    this.options.svg.selectAll('.traceBubble').remove();
-                }
-            }
-        }
+    export interface PlayBehaviorOptions {
+        traceLineRenderer?: ITraceLineRenderer;
     }
 } 

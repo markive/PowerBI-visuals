@@ -1,8 +1,11 @@
 /*
  *  Card With States By SQLBI
- *  v1.1.0
- *
- *  Power BI Visualizations
+ *  v1.2.0
+ *  Based on the Power BI builtin Card, this visual allows you to bind a performance measure and define up to 3 states that determine the color of the data label. Moreover, the category label is fully customizable (text size and word wrap included) and you can display an additional performance label. 
+ * 
+ *  Contact info@sqlbi.com
+ *  Support URL http://www.sqlbi.com/
+ *  Github URL https://github.com/danieleperilli/PowerBI-visuals/blob/master/src/Clients/Visuals/visuals/cardWithStatesBySQLBI.ts
  *
  *  Copyright (c) SQLBI
  *  All rights reserved. 
@@ -40,7 +43,6 @@ module powerbi.visuals {
         label: {
             fontSize: number;
             color: string;
-            height: number;
         };
         value: {
             fontSize: number;
@@ -67,6 +69,9 @@ module powerbi.visuals {
         color: string;
         text?: string;
         show: boolean;
+        fontSize?: number;
+        wordWrap?: boolean;
+        topMargin?: number;
     }
 
     export interface CardWithStatesBySQLBIFormatSettings {
@@ -82,11 +87,15 @@ module powerbi.visuals {
             show: <DataViewObjectPropertyIdentifier>{ objectName: 'cardTitle', propertyName: 'show' },
             color: <DataViewObjectPropertyIdentifier>{ objectName: 'cardTitle', propertyName: 'color' },
             text: <DataViewObjectPropertyIdentifier>{ objectName: 'cardTitle', propertyName: 'text' },
+            fontSize: <DataViewObjectPropertyIdentifier>{ objectName: 'cardTitle', propertyName: 'fontSize' },
+            wordWrap: <DataViewObjectPropertyIdentifier>{ objectName: 'cardTitle', propertyName: 'wordWrap' },
+            topMargin: <DataViewObjectPropertyIdentifier>{ objectName: 'cardTitle', propertyName: 'topMargin' },
         },
         labels: {
             color: <DataViewObjectPropertyIdentifier>{ objectName: 'labels', propertyName: 'color' },
             labelPrecision: <DataViewObjectPropertyIdentifier>{ objectName: 'labels', propertyName: 'labelPrecision' },
             labelDisplayUnits: <DataViewObjectPropertyIdentifier>{ objectName: 'labels', propertyName: 'labelDisplayUnits' },
+            fontSize: <DataViewObjectPropertyIdentifier>{ objectName: 'labels', propertyName: 'fontSize' },
         },
         dataState1: {
             color: <DataViewObjectPropertyIdentifier>{ objectName: 'dataState1', propertyName: 'color' },
@@ -126,12 +135,12 @@ module powerbi.visuals {
                 maxFontSize: 200
             },
             label: {
-                fontSize: 16,
+                fontSize: 12,
                 color: '#a6a6a6',
                 height: 26
             },
             value: {
-                fontSize: 37,
+                fontSize: 27,
                 color: '#333333',
                 fontFamily: 'wf_segoe-ui_Semibold'
             }
@@ -191,10 +200,10 @@ module powerbi.visuals {
                     },
                 },
                 labels: {
-                    displayName: 'Label',
+                    displayName: 'Data label',
                     properties: {
                         color: {
-                            displayName: 'Base color',
+                            displayName: 'Color',
                             type: { fill: { solid: { color: true } } }
                         },
                         labelDisplayUnits: {
@@ -205,6 +214,11 @@ module powerbi.visuals {
                             displayName: 'Decimal points',
                             type: { numeric: true }
                         },
+                        fontSize: {
+                            displayName: 'Text size',
+                            type: { formatting: { fontSize: true } }
+                        },
+
                     },
                 },
                 dataState1: {
@@ -283,7 +297,7 @@ module powerbi.visuals {
                     },
                 },
                 cardTitle: {
-                    displayName: 'Description label',
+                    displayName: 'Category label',
                     properties: {
                         color: {
                             displayName: 'Color',
@@ -296,6 +310,18 @@ module powerbi.visuals {
                         show: {
                             displayName: 'Show',
                             type: { bool: true }
+                        },
+                        wordWrap: {
+                            displayName: 'Word wrap',
+                            type: { bool: true }
+                        },
+                        fontSize: {
+                            displayName: 'Text size',
+                            type: { formatting: { fontSize: true } }
+                        },
+                        topMargin: {
+                            displayName: 'Margin top',
+                            type: { numeric: true }
                         },
                     },
                 }
@@ -380,10 +406,15 @@ module powerbi.visuals {
 
                         labelSettings.displayUnits = DataViewObjects.getValue(objects, cardWithStatesBySQLBIProps.labels.labelDisplayUnits, labelSettings.displayUnits);
 
+                        labelSettings.fontSize = DataViewObjects.getValue(objects, cardWithStatesBySQLBIProps.labels.fontSize, labelSettings.fontSize);
+
                         var titleSettings = this.cardFormatSettings.titleSettings;
                         titleSettings.show = DataViewObjects.getValue(objects, cardWithStatesBySQLBIProps.cardTitle.show, titleSettings.show);
                         titleSettings.color = DataViewObjects.getFillColor(objects, cardWithStatesBySQLBIProps.cardTitle.color, titleSettings.color);
                         titleSettings.text = DataViewObjects.getValue(objects, cardWithStatesBySQLBIProps.cardTitle.text, titleSettings.text);
+                        titleSettings.fontSize = DataViewObjects.getValue(objects, cardWithStatesBySQLBIProps.cardTitle.fontSize, titleSettings.fontSize);
+                        titleSettings.wordWrap = DataViewObjects.getValue(objects, cardWithStatesBySQLBIProps.cardTitle.wordWrap, titleSettings.wordWrap);
+                        titleSettings.topMargin = DataViewObjects.getValue(objects, cardWithStatesBySQLBIProps.cardTitle.topMargin, titleSettings.topMargin);
 
                         var dataState1 = this.cardFormatSettings.dataState1;
                         dataState1.color = DataViewObjects.getFillColor(objects, cardWithStatesBySQLBIProps.dataState1.color, dataState1.color);
@@ -450,8 +481,7 @@ module powerbi.visuals {
                         }
                     }
                 }
-                
-        }
+            }
 
             var start = this.value;
             if (value === undefined) {
@@ -474,7 +504,9 @@ module powerbi.visuals {
             ValueType.fromPrimitiveTypeAndCategory(PrimitiveType.Decimal);
 
             var labelStyles = CardWithStatesBySQLBI.DefaultStyle.label;
+            var labelFontSize = parseInt(jsCommon.PixelConverter.fromPoint(this.cardFormatSettings.titleSettings.fontSize));
             var valueStyles = CardWithStatesBySQLBI.DefaultStyle.value;
+            var valueFontSize = parseInt(jsCommon.PixelConverter.fromPoint(labelSettings.fontSize));
 
             if (start !== value)
                 value = formatter.format(value);
@@ -499,10 +531,10 @@ module powerbi.visuals {
             }
 
             var translateX = this.getTranslateX(this.currentViewport.width);
-            var translateY = (this.currentViewport.height - labelStyles.height - valueStyles.fontSize) / 2;
+            var translateY = (this.currentViewport.height - labelFontSize - valueFontSize) / 2;
 
             var valueElement = this.graphicsContext
-                .attr('transform', SVGUtil.translate(translateX, this.getTranslateY(valueStyles.fontSize + translateY)))
+                .attr('transform', SVGUtil.translate(translateX, this.getTranslateY(valueFontSize + translateY)))
                 .selectAll('text')
                 .data([value]);
 
@@ -514,7 +546,7 @@ module powerbi.visuals {
             valueElement
                 .text((d: any) => d)
                 .style({
-                    'font-size': valueStyles.fontSize + 'px',
+                    'font-size': valueFontSize + 'px',
                     'fill': valueColor,
                     'font-family': valueStyles.fontFamily,
                     'text-anchor': this.getTextAnchor()
@@ -526,7 +558,7 @@ module powerbi.visuals {
 
             valueElement.exit().remove();
 
-            translateY = this.getTranslateY(valueStyles.fontSize + labelStyles.height + translateY);
+            translateY = this.getTranslateY(valueFontSize + labelFontSize + translateY + this.cardFormatSettings.titleSettings.topMargin);
 
             this.labelContext.selectAll('.unit').remove();
             if (this.cardFormatSettings.titleSettings.show) {
@@ -537,14 +569,22 @@ module powerbi.visuals {
                     .attr('transform', 'translate(' + translateX + ',' + translateY + ')')
                     .text(this.cardFormatSettings.titleSettings.text)
                     .style({
-                        'font-size': labelStyles.fontSize + 'px',
+                        'font-size': labelFontSize + 'px',
                         'fill': this.cardFormatSettings.titleSettings.color,
                         'text-anchor': this.getTextAnchor()
                     });
 
-                labelElement.call(AxisHelper.LabelLayoutStrategy.clip, this.currentViewport.width, TextMeasurementService.svgEllipsis);
+                if (this.cardFormatSettings.titleSettings.wordWrap) {
+                    var labelElementNode = <SVGTextElement>labelElement.node();
+                    TextMeasurementService.wordBreak(labelElementNode, this.currentViewport.width, this.currentViewport.height - translateY);
 
-                translateY += labelStyles.fontSize + 10 ;
+                    translateY += (labelElementNode.childNodes.length * (labelFontSize + 2)) + 10;
+
+                } else {
+                    labelElement.call(AxisHelper.LabelLayoutStrategy.clip, this.currentViewport.width, TextMeasurementService.svgEllipsis);
+
+                    translateY += labelFontSize + 10;
+                }
             }
 
             this.labelContext.selectAll('.perf').remove();
@@ -563,7 +603,7 @@ module powerbi.visuals {
                     .attr('transform', 'translate(' + translateX + ',' + translateY + ')')
                     .text(performanceStatus)
                     .style({
-                        'font-size': (labelStyles.fontSize - 4) + 'px',
+                        'font-size': (labelFontSize - 4) + 'px',
                         'fill': '#a6a6a6',
                         'text-anchor': this.getTextAnchor()
                     });
@@ -572,7 +612,7 @@ module powerbi.visuals {
 
                 
                 var labelWidth = TextMeasurementService.measureSvgTextWidth({
-                    fontFamily: valueStyles.fontFamily, fontSize: (labelStyles.fontSize - 4) + 'px', text: performanceStatus
+                    fontFamily: valueStyles.fontFamily, fontSize: (labelFontSize - 4) + 'px', text: performanceStatus
                  });
 
                 this.labelContext
@@ -623,9 +663,12 @@ module powerbi.visuals {
                 titleSettings: {
                     show: true,
                     color: CardWithStatesBySQLBI.DefaultStyle.label.color,
-                    text: undefined
+                    text: undefined,
+                    fontSize: CardWithStatesBySQLBI.DefaultStyle.label.fontSize,
+                    wordWrap: false,
+                    topMargin: 0
                 },
-                labelSettings: dataLabelUtils.getDefaultLabelSettings(true, CardWithStatesBySQLBI.DefaultStyle.value.color),
+                labelSettings: dataLabelUtils.getDefaultCardLabelSettings(CardWithStatesBySQLBI.DefaultStyle.value.color, CardWithStatesBySQLBI.DefaultStyle.label.color, CardWithStatesBySQLBI.DefaultStyle.value.fontSize),
                 dataState1: {
                     color: '#FD625E', //Red
                     dataMin: -Infinity,
@@ -666,6 +709,7 @@ module powerbi.visuals {
                             color: this.cardFormatSettings.labelSettings.labelColor,
                             labelDisplayUnits: this.cardFormatSettings.labelSettings.displayUnits,
                             labelPrecision: this.cardFormatSettings.labelSettings.precision,
+                            fontSize: this.cardFormatSettings.labelSettings.fontSize
                         },
                     }];
 
@@ -676,7 +720,10 @@ module powerbi.visuals {
                         properties: {
                             show: this.cardFormatSettings.titleSettings.show,
                             text: this.cardFormatSettings.titleSettings.text,
-                            color: this.cardFormatSettings.titleSettings.color
+                            wordWrap: this.cardFormatSettings.titleSettings.wordWrap,
+                            color: this.cardFormatSettings.titleSettings.color,
+                            fontSize: this.cardFormatSettings.titleSettings.fontSize,
+                            topMargin: this.cardFormatSettings.titleSettings.topMargin,
                         },
                     }];
                 case 'dataState1':

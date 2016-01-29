@@ -66,13 +66,14 @@ module powerbi {
         EmbeddedString = 1,
     }
 
-    export enum ServiceErrorStatusCode {
+    export const enum ServiceErrorStatusCode {
         GeneralError = 0,
         CsdlFetching = 1,
         CsdlConvertXmlToConceptualSchema = 2,
         CsdlCreateClientSchema = 3,
         ExecuteSemanticQueryError = 4,
         ExecuteSemanticQueryInvalidStreamFormat = 5,
+        ExecuteSemanticQueryTransformError = 6,
     }
 
     export class ServiceErrorToClientError implements IClientError {
@@ -101,7 +102,13 @@ module powerbi {
         }
 
         public getDetails(resourceProvider: IStringResourceProvider): ErrorDetails {
-            let errorDetails: ErrorDetails = PowerBIErrorDetailHelper.GetDetailsFromServerErrorStatusCode(resourceProvider, this.m_serviceError.statusCode);
+            let errorDetails: ErrorDetails;
+            if (this.m_serviceError.statusCode === ServiceErrorStatusCode.ExecuteSemanticQueryTransformError) {
+                errorDetails = PowerBIErrorDetailHelper.GetDetailsFromTransformError(resourceProvider, this.m_serviceError);
+            }
+            else {
+                errorDetails = PowerBIErrorDetailHelper.GetDetailsFromServerErrorStatusCode(resourceProvider, this.m_serviceError.statusCode);
+            }
 
             PowerBIErrorDetailHelper.addAdditionalInfo(errorDetails, this.m_serviceError.errorDetails, resourceProvider);
             PowerBIErrorDetailHelper.addMessageAndStackTrace(errorDetails, this.m_serviceError.message || null, this.m_serviceError.stackTrace || null, resourceProvider);
@@ -116,8 +123,9 @@ module powerbi {
             if (pbiErrorDetails) {
                 for (let i = 0; i < pbiErrorDetails.length; i++) {
                     let element = pbiErrorDetails[i];
+                    let localizedCode = localize.get(PowerBIErrorDetailHelper.serverErrorPrefix + element.code);
                     let additionErrorInfoKeyValuePair = {
-                        errorInfoKey: localize.get(PowerBIErrorDetailHelper.serverErrorPrefix + element.code),
+                        errorInfoKey: localizedCode ? localizedCode : element.code,
                         errorInfoValue: element.detail.type === PowerBIErrorResourceType.ResourceCodeReference ? localize.get(PowerBIErrorDetailHelper.serverErrorPrefix + element.detail.value) : element.detail.value
                     };
 
@@ -142,6 +150,22 @@ module powerbi {
                 };
                 errorDetails.additionalErrorInfo.push(additionErrorInfoKeyValuePair);
             }
+            return errorDetails;
+        }
+
+        public static GetDetailsFromTransformError(localize: IStringResourceProvider, serviceError: ServiceError): ErrorDetails {
+            let message = localize.get('ServiceError_CannotLoadVisual');
+            let key = localize.get('ServiceError_CannotLoadVisual');
+            let val = serviceError.message;
+
+            let additionalInfo: ErrorInfoKeyValuePair[] = [];
+            additionalInfo.push({ errorInfoKey: key, errorInfoValue: val, });
+
+            let errorDetails: ErrorDetails = {
+                message: message,
+                additionalErrorInfo: additionalInfo,
+            };
+
             return errorDetails;
         }
 

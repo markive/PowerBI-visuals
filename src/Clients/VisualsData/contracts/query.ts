@@ -40,7 +40,7 @@ module powerbi.data {
         Version?: number;
         From: EntitySource[];
         Where: QueryFilter[];
-    }
+    }    
 
     export enum EntitySourceType {
         Table = 0,
@@ -62,7 +62,7 @@ module powerbi.data {
 
     export interface QuerySortClause {
         Expression: QueryExpressionContainer;
-        Direction: QuerySortDirection;
+        Direction: SortDirection;
     }
 
     export interface QueryExpressionContainer {
@@ -235,11 +235,6 @@ module powerbi.data {
         Variance = 8,
     }
 
-    export enum QuerySortDirection {
-        Ascending = 1,
-        Descending = 2,
-    }
-
     export enum QueryComparisonKind {
         Equal = 0,
         GreaterThan = 1,
@@ -251,6 +246,47 @@ module powerbi.data {
     export interface SemanticQueryDataShapeCommand {
         Query: QueryDefinition;
         Binding: DataShapeBinding;
+    }
+
+    /** Only one of the members can be non-null at any one time */
+    export interface QueryCommand {
+        SemanticQueryDataShapeCommand?: SemanticQueryDataShapeCommand;
+        ScriptVisualCommand?: ScriptVisualCommand;
+    }
+
+    export interface DataQuery {
+        Commands: QueryCommand[];
+    }
+
+    /** The final (single) result of a DataQuery is cacheable.
+          * The intermediate results coming out of each QueryCommand (a DataQuery.Commands[i]) is not cached nor returned to the client. */
+    export interface DataQueryRequest {
+        Query: DataQuery;
+
+        /** Optional server-side cache key for the semantic query. This CacheKey is not used to the IQueryCache (client-side cache). */
+        CacheKey?: string;
+    }
+
+    export interface ScriptInputColumn {
+        /** The queryName of the corresponding Select from the associated SemanticQuery providing the data for this column. */ 
+        QueryName: string; 
+
+        /** The name of this column expected by the script. */
+        Name: string;
+    }
+
+    export interface ScriptInput {
+        VariableName?: string;
+        Columns?: ScriptInputColumn[];
+    }
+
+    export interface ScriptVisualCommand {
+        Script?: string;
+        RenderingEngine?: string;
+        ViewportWidthPx?: number;
+        ViewportHeightPx?: number;
+        Version?: number;
+        ScriptInput?: ScriptInput;
     }
 
     /** Defines semantic data types. */
@@ -300,6 +336,12 @@ module powerbi.data {
 
         /** The select projection name. */
         Name?: string;
+
+        /* If defined, this indicates the KPI class*/
+        kpiStatusGraphic?: string; // old version of kpi data
+
+        /* If defined, this indicates the KPI metadata*/
+        kpi?: DataViewKpiColumnMetadata;
     }
 
     export interface FilterMetadata {
@@ -311,4 +353,4 @@ module powerbi.data {
         Default,
         Period,
     }
-} 
+}

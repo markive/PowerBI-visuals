@@ -55,7 +55,23 @@ module jsCommon {
 
             return (value & flag) === flag;
         }
-        
+
+        /**
+         * Sets a value of a flag without modifying any other flags.
+         */        
+        export function setFlag(value: number, flag: number): number {
+            debug.assert(!!flag, "flag must be specified and nonzero.");
+            return value |= flag;
+        }
+
+        /**
+         * Resets a value of a flag without modifying any other flags.
+         */                
+        export function resetFlag(value: number, flag: number): number {
+            debug.assert(!!flag, "flag must be specified and nonzero.");
+            return value &= ~flag;
+        }
+
         /**
          * According to the TypeScript Handbook, this is safe to do.
          */
@@ -139,9 +155,46 @@ module jsCommon {
 
         /**
          * Converts point value (pt) to pixels
+         * Returns a string for font-size property
+         * e.g. fromPoint(8) => '24px'
          */
         export function fromPoint(pt: number): string {
-            return toString(PxPtRatio * pt);
+            return toString(fromPointToPixel(pt));
+        }
+
+       /**
+        * Converts point value (pt) to pixels
+        * Returns a number for font-size property
+        * e.g. fromPoint(8) => 24px
+        */
+        export function fromPointToPixel(pt: number): number {
+            return (PxPtRatio * pt);
+        }
+
+        /**
+         * Converts pixel value (px) to pt
+         * e.g. toPoint(24) => 8
+         */
+        export function toPoint(px: number): number {
+            return px / PxPtRatio;
         }
     }
-} 
+
+    export module RegExpExtensions {
+        /**
+         * Runs exec on regex starting from 0 index
+         * This is the expected behavior but RegExp actually remember
+         * the last index they stopped at (found match at) and will
+         * return unexpected results when run in sequence.
+         * @param regex - regular expression object
+         * @param value - string to search wiht regex
+         * @param start - index within value to start regex
+         */
+        export function run(regex: RegExp, value: string, start?: number): RegExpExecArray {
+            debug.assertValue(regex, 'regex');
+
+            regex.lastIndex = start || 0;
+            return regex.exec(value);
+        }
+    }
+}

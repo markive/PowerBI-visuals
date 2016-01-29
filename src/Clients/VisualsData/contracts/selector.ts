@@ -39,18 +39,14 @@ module powerbi.data {
         id?: string;
     }
 
-    /* tslint:disable:no-unused-expression */
     export type DataRepetitionSelector = DataViewScopeIdentity | DataViewScopeWildcard;
-    /* tslint:enable */
 
     export module Selector {
-        import ArrayExtensions = jsCommon.ArrayExtensions;
-
         export function filterFromSelector(selectors: Selector[], isNot?: boolean): SemanticFilter {
-            if (ArrayExtensions.isUndefinedOrEmpty(selectors))
+            if (_.isEmpty(selectors))
                 return;
 
-            let expr: SQExpr;
+            let exprs: SQExpr[] = [];
             for (let i = 0, ilen = selectors.length; i < ilen; i++) {
                 let identity = selectors[i];
                 let data = identity.data;
@@ -61,13 +57,12 @@ module powerbi.data {
                     }
                 }
 
-                expr = SQExprBuilder.or(expr, exprToAdd);
+                if (exprToAdd)
+                    exprs.push(exprToAdd);
             }
 
-            if (expr && isNot)
-                expr = SQExprBuilder.not(expr);
-
-            return SemanticFilter.fromSQExpr(expr);
+            if (!_.isEmpty(exprs))
+                return DataViewScopeIdentity.filterFromExprs(exprs, isNot);
         }
 
         export function matchesData(selector: Selector, identities: DataViewScopeIdentity[]): boolean {
@@ -110,7 +105,7 @@ module powerbi.data {
                     selectorDataExprs: SQExpr[];
 
                 if ((<DataViewScopeIdentity>selectorDataItem).expr) {
-                    selectorDataExprs = ScopeIdentityKeyExtractor.run((<DataViewScopeIdentity>selectorDataItem).expr);
+                    selectorDataExprs = ScopeIdentityExtractor.getKeys((<DataViewScopeIdentity>selectorDataItem).expr);
                 }
                 else {
                     selectorDataExprs = (<DataViewScopeWildcard>selectorDataItem).exprs;

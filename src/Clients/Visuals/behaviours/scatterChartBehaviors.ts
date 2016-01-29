@@ -27,14 +27,20 @@
 /// <reference path="../_references.ts"/>
 
 module powerbi.visuals {
+    import ClassAndSelector = jsCommon.CssConstants.ClassAndSelector;
+    import createClassAndSelector = jsCommon.CssConstants.createClassAndSelector;
 
     export interface ScatterBehaviorOptions {
-        host: ICartesianVisualHost;
-        root: D3.Selection;
-        mainContext: D3.Selection;
-        background: D3.Selection;
         dataPointsSelection: D3.Selection;
         data: ScatterChartData;
+        plotContext: D3.Selection;
+        playOptions?: PlayBehaviorOptions;
+    }
+
+    export interface ScatterMobileBehaviorOptions extends ScatterBehaviorOptions {
+        host: ICartesianVisualHost;
+        root: D3.Selection;
+        background: D3.Selection;
         visualInitOptions: VisualInitOptions;
         xAxisProperties: IAxisProperties;
         yAxisProperties: IAxisProperties;
@@ -44,10 +50,21 @@ module powerbi.visuals {
         private bubbles: D3.Selection;
         private shouldEnableFill: boolean;
         private colorBorder: boolean;
+        private playOptions: PlayBehaviorOptions;
 
         public bindEvents(options: ScatterBehaviorOptions, selectionHandler: ISelectionHandler): void {
             let bubbles = this.bubbles = options.dataPointsSelection;
             let data = options.data;
+
+            // If we are removing play-axis, remove the trace lines as well
+            // TODO: revisit this design, I think ideally this is done when rendering scatter.
+            if (this.playOptions
+                && this.playOptions.traceLineRenderer
+                && (!options.playOptions || !options.playOptions.traceLineRenderer)) {
+                this.playOptions.traceLineRenderer.remove();
+            }
+
+            this.playOptions = options.playOptions;
             this.shouldEnableFill = (!data.sizeRange || !data.sizeRange.min) && data.fillPoint;
             this.colorBorder = data.colorBorder;
 
@@ -61,6 +78,17 @@ module powerbi.visuals {
             let colorBorder = this.colorBorder;
             this.bubbles.style("fill-opacity", (d: ScatterChartDataPoint) => (d.size != null || shouldEnableFill) ? ScatterChart.getBubbleOpacity(d, hasSelection) : 0);
             this.bubbles.style("stroke-opacity", (d: ScatterChartDataPoint) => (d.size != null && colorBorder) ? 1 : ScatterChart.getBubbleOpacity(d, hasSelection));
+
+            if (this.playOptions && this.bubbles) {
+                let selectedPoints = this.bubbles.filter((d: SelectableDataPoint) => d.selected);
+                let traceLineRenderer = this.playOptions.traceLineRenderer;
+                if (selectedPoints && selectedPoints.data().length > 0 && traceLineRenderer != null) {
+                    traceLineRenderer.render(selectedPoints.data(), true);
+                }
+                else {
+                    traceLineRenderer.remove();
+                }
+            }
         }
     }
 
@@ -80,14 +108,8 @@ module powerbi.visuals {
         private static DotClassName = 'dot';
         private static DotClassSelector = '.' + ScatterChartMobileBehavior.DotClassName;
 
-        private static Horizontal: ClassAndSelector = {
-            class: 'horizontal',
-            selector: '.horizontal'
-        };
-        private static Vertical: ClassAndSelector = {
-            class: 'vertical',
-            selector: '.vertical'
-        };
+        private static Horizontal: ClassAndSelector = createClassAndSelector('horizontal');
+        private static Vertical: ClassAndSelector = createClassAndSelector('vertical');
 
         private host: ICartesianVisualHost;
         private mainGraphicsContext: D3.Selection;
@@ -99,13 +121,19 @@ module powerbi.visuals {
         private xAxisProperties: IAxisProperties;
         private yAxisProperties: IAxisProperties;
 
-        public bindEvents(options: ScatterBehaviorOptions, selectionHandler: ISelectionHandler): void {
+        public bindEvents(options: ScatterMobileBehaviorOptions, selectionHandler: ISelectionHandler): void {
             this.setOptions(options);
+
+            if (!options.visualInitOptions || !options.visualInitOptions.interactivity.isInteractiveLegend) {
+                // Don't bind events if we are not in interactiveLegend mode
+                // This case happend when on mobile we show the whole dashboard in still not on focus
+                return;
+            }
 
             this.makeDataPointsSelectable(options.dataPointsSelection);
             this.makeRootSelectable(options.root);
             this.makeDragable(options.root);
-
+            this.disableDefaultTouchInteractions(options.root);
             this.selectRoot();
         }
 
@@ -141,9 +169,13 @@ module powerbi.visuals {
             }
         }
 
-        public setOptions(options: ScatterBehaviorOptions) {
+        private disableDefaultTouchInteractions(selection: D3.Selection): void {
+            selection.style('touch-action', 'none');
+        }
+
+        public setOptions(options: ScatterMobileBehaviorOptions) {
             this.data = options.data;
-            this.mainGraphicsContext = options.mainContext;
+            this.mainGraphicsContext = options.plotContext;
             this.xAxisProperties = options.xAxisProperties;
             this.yAxisProperties = options.yAxisProperties;
             this.host = options.host;
@@ -188,7 +220,7 @@ module powerbi.visuals {
             let xy = this.getMouseCoordinates();
             let selectedIndex = this.findClosestDotIndex(xy.x, xy.y);
             if (selectedIndex !== -1)
-            this.selectDotByIndex(selectedIndex);
+                this.selectDotByIndex(selectedIndex);
         }
 
         private getMouseCoordinates(): MouseCoordinates {
@@ -292,7 +324,7 @@ module powerbi.visuals {
 
         private createLegendDataPoints(dotIndex: number): LegendData {
             let formatStringProp = scatterChartProps.general.formatString;
-            let legendItems = [];
+            let legendItems: LegendDataPoint[] = [];
             let data = this.data;
             debug.assert(data.dataPoints.length > dotIndex, "dataPoints length:" + data.dataPoints.length + "is smaller than index:" + dotIndex);
             let point = data.dataPoints[dotIndex];
@@ -310,30 +342,37 @@ module powerbi.visuals {
             } else if (legendDataPoints.length >= dotIndex && legendDataPoints[dotIndex].label !== blank) {
                 title = legendDataPoints[dotIndex].label;
             }
+
             if (data.xCol != null) {
                 legendItems.push({
                     category: title,
                     color: point.fill,
+                    identity: SelectionIdBuilder.builder().withMeasure(data.xCol.queryName).createSelectionId(),
+                    selected: point.selected,
                     icon: LegendIcon.Box,
                     label: valueFormatter.format(this.data.axesLabels.x),
                     measure: valueFormatter.format(point.x, valueFormatter.getFormatString(data.xCol, formatStringProp)),
-                    iconOnlyOnLabel: true
+                    iconOnlyOnLabel: true,
                 });
             }
-            if (data.yCol !== undefined && data.yCol !== null) {
+            if (data.yCol != null) {
                 legendItems.push({
                     category: title,
                     color: point.fill,
+                    identity: SelectionIdBuilder.builder().withMeasure(data.yCol.queryName).createSelectionId(),
+                    selected: point.selected,
                     icon: LegendIcon.Box,
                     label: valueFormatter.format(data.axesLabels.y),
                     measure: valueFormatter.format(point.y, valueFormatter.getFormatString(data.yCol, formatStringProp)),
-                    iconOnlyOnLabel: true
+                    iconOnlyOnLabel: true,
                 });
             }
-            if (data.size !== undefined && data.size !== null) {
+            if (data.size != null) {
                 legendItems.push({
                     category: title,
                     color: point.fill,
+                    identity: SelectionIdBuilder.builder().withMeasure(data.size.queryName).createSelectionId(),
+                    selected: point.selected,
                     icon: LegendIcon.Box,
                     label: valueFormatter.format(data.size.displayName),
                     measure: valueFormatter.format(point.radius.sizeMeasure.values[point.radius.index], valueFormatter.getFormatString(data.size, formatStringProp)),

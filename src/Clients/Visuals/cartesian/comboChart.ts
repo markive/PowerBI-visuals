@@ -41,6 +41,25 @@ module powerbi.visuals {
      * Implementation is in cartesianChart and the various ICartesianVisual implementations.
      */
     export module ComboChart {
-        export var capabilities = comboChartCapabilities;
+        export const capabilities = comboChartCapabilities;
+
+        export function customizeQuery(options: CustomizeQueryOptions): void {
+            // If there is a dynamic series but no values on the column data view mapping, remove the dynamic series
+            let columnMapping = !_.isEmpty(options.dataViewMappings) && options.dataViewMappings[0];
+            if (columnMapping) {
+                let columnValuesMapping: data.CompiledDataViewGroupedRoleMapping = columnMapping.categorical && <data.CompiledDataViewGroupedRoleMapping>columnMapping.categorical.values;
+                let seriesSelect = columnValuesMapping.group && !_.isEmpty(columnValuesMapping.group.select) && <data.CompiledDataViewRoleForMapping>columnValuesMapping.group.select[0];
+                if (_.isEmpty(seriesSelect.for.in.items))
+                    columnValuesMapping.group.by.items = undefined;
+            }
+        }
+
+        export function isComboChart(chartType: CartesianChartType): boolean {
+            return chartType === CartesianChartType.ComboChart
+                || chartType === CartesianChartType.LineClusteredColumnCombo
+                || chartType === CartesianChartType.LineStackedColumnCombo
+                || chartType === CartesianChartType.DataDotClusteredColumnCombo
+                || chartType === CartesianChartType.DataDotStackedColumnCombo;
+        }
     }
 }
