@@ -1,6 +1,6 @@
 ﻿/*
  *  Synoptic Panel by SQLBI
- *  v1.2.5
+ *  v1.2.6
  *  The Synoptic Panel connects areas in a picture with attributes in the data model, coloring each area with a state (red/yellow green) or with a saturation of a color related to the value of a measure. Starting from any image, you draw custom areas using https://synoptic.design, which generates a SVG file you import in the Synoptic Panel. You can visualize data over a map, a planimetry, a diagram, a flow chart.
  * 
  *  Contact info@sqlbi.com
@@ -54,22 +54,20 @@ module powerbi.visuals {
     export interface SynopticPanelBySQLBIData {
         dataPoints: SynopticPanelDataPoint[];
         legendData: LegendData;
+        legendObjectProperties?: DataViewObject;
+        maxValue?: number;
         hasHighlights: boolean;
         dataLabelsSettings: VisualDataLabelsSettings;
         boundMaps: any[];
-        defaultDataPointColor?: string;
-        showAllDataPoints?: boolean;
-        legendObjectProperties?: DataViewObject;
-        maxValue?: number;
+        imageData?: string;
+        
+        matched?: SynopticPanelBySQLBIAreas;
+        unmatched?: SynopticPanelBySQLBIAreas;
+
         dataState1?: SynopticPanelBySQLBIState;
         dataState2?: SynopticPanelBySQLBIState;
         dataState3?: SynopticPanelBySQLBIState;
         saturationState?: SynopticPanelBySQLBIState;
-        imageData?: string;
-        colorize?: boolean;
-        showAllShapes?: boolean;
-        showAllAreas?: boolean;
-        showAreasLabels?: boolean;
     }
 
     export interface SynopticPanelBySQLBIBehaviorOptions {
@@ -114,9 +112,9 @@ module powerbi.visuals {
             imageData: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'imageData' },
         },
         dataAreas: {     
-            showAllShapes: <DataViewObjectPropertyIdentifier>{ objectName: 'dataAreas', propertyName: 'showAllShapes' },
-            showAllAreas: <DataViewObjectPropertyIdentifier>{ objectName: 'dataAreas', propertyName: 'showAllAreas' },
-            showAreasLabels: <DataViewObjectPropertyIdentifier>{ objectName: 'dataAreas', propertyName: 'showAreasLabels' },
+            show: <DataViewObjectPropertyIdentifier>{ objectName: 'dataAreas', propertyName: 'show' },
+            colorize: <DataViewObjectPropertyIdentifier>{ objectName: 'dataAreas', propertyName: 'colorize' },
+            fill: <DataViewObjectPropertyIdentifier>{ objectName: 'dataAreas', propertyName: 'fill' },
         },
         dataPoint: {
             colorize: <DataViewObjectPropertyIdentifier>{ objectName: 'dataPoint', propertyName: 'colorize' },
@@ -129,6 +127,8 @@ module powerbi.visuals {
             position: <DataViewObjectPropertyIdentifier>{ objectName: 'legend', propertyName: 'position' },
             showTitle: <DataViewObjectPropertyIdentifier>{ objectName: 'legend', propertyName: 'showTitle' },
             titleText: <DataViewObjectPropertyIdentifier>{ objectName: 'legend', propertyName: 'titleText' },
+            labelColor: <DataViewObjectPropertyIdentifier>{ objectName: 'legend', propertyName: 'labelColor' },
+            fontSize: <DataViewObjectPropertyIdentifier>{ objectName: 'legend', propertyName: 'fontSize' },
         },
         saturationState: {
             dataMin: <DataViewObjectPropertyIdentifier>{ objectName: 'saturationState', propertyName: 'dataMin' },
@@ -156,6 +156,13 @@ module powerbi.visuals {
         dataMax: number;
         color?: string;
         inBinding: boolean;
+    }
+
+    export interface SynopticPanelBySQLBIAreas {
+        show: boolean;
+        colorize: boolean;
+        color?: string;
+        showMultipleColors?: boolean;
     }
 
     export interface SynopticPanelImage {
@@ -222,14 +229,11 @@ module powerbi.visuals {
         public static getDefaultData(): SynopticPanelBySQLBIData {
             return {
                 dataPoints: [],
-                legendData: { title: '', dataPoints: [] },
+                legendData: { title: '', dataPoints: [], fontSize: SVGLegend.DefaultFontSizeInPt },
                 hasHighlights: false,
                 dataLabelsSettings: dataLabelUtils.getDefaultLabelSettings(),
-                colorize: true,
-                showAllShapes: true,
-                showAllAreas: false,
-                showAreasLabels: false,
-                showAllDataPoints: false,
+                unmatched: { show: true, colorize: false },
+                matched: { show: true, colorize: true, showMultipleColors: false, },
                 dataState1: {
                     color: '#FD625E', //Red
                     dataMin: -Infinity,
@@ -346,17 +350,17 @@ module powerbi.visuals {
                 dataAreas: {
                     displayName: 'Unmatched areas',
                     properties: {
-                        showAllShapes: {
+                        show: {
                             displayName: 'Show',
                             type: { bool: true }
                         },
-                        showAllAreas: {
+                        colorize: {
                             displayName: 'Colorize',
                             type: { bool: true }
                         },
-                        showAreasLabels: {
-                            displayName: 'Labels',
-                            type: { bool: true }
+                        fill: {
+                            displayName: 'Color',
+                            type: { fill: { solid: { color: true } } }
                         },
                     },
                 },
@@ -368,7 +372,7 @@ module powerbi.visuals {
                             type: { bool: true }
                         },
                         defaultColor: {
-                            displayName: 'Default color',
+                            displayName: 'Single color',
                             type: { fill: { solid: { color: true } } }
                         },
                         showAllDataPoints: {
@@ -446,7 +450,7 @@ module powerbi.visuals {
                     },
                 },
                 dataLabels: {
-                    displayName: 'Data labels',
+                    displayName: 'Labels',
                     properties: {
                         show: {
                             displayName: 'Show',
@@ -460,14 +464,13 @@ module powerbi.visuals {
                             displayName: 'Decimal points',
                             type: { numeric: true }
                         },
-                    },
-                },
-                categoryLabels: {
-                    displayName: 'Category Labels',
-                    properties: {
-                        show: {
-                            displayName: 'Show',
-                            type: { bool: true }
+                        fontSize: {
+                            displayName: 'Text size',
+                            type: { formatting: { fontSize: true } }
+                        },
+                        labelStyle: {
+                            displayName: 'Style',
+                            type: { enumeration: labelStyle.type }
                         },
                     },
                 },
@@ -480,15 +483,23 @@ module powerbi.visuals {
                         },
                         position: {
                             displayName: 'Position',
-                            type: { formatting: { legendPosition: true } }
+                            type: { enumeration: legendPosition.type }
                         },
                         showTitle: {
                             displayName: 'Title',
                             type: { bool: true }
                         },
                         titleText: {
-                            displayName: 'Title text',
+                            displayName: 'Legend name',
                             type: { text: true }
+                        },
+                        labelColor: {
+                            displayName: 'Color',
+                            type: { fill: { solid: { color: true } } }
+                        },
+                        fontSize: {
+                            displayName: 'Text size',
+                            type: { formatting: { fontSize: true } }
                         }
                     }
                 },
@@ -566,7 +577,7 @@ module powerbi.visuals {
 
             this.data = {
                 dataPoints: [],
-                legendData: { title: '', dataPoints: [] },
+                legendData: { title: '', dataPoints: [], fontSize: SVGLegend.DefaultFontSizeInPt },
                 hasHighlights: false,
                 dataLabelsSettings: dataLabelUtils.getDefaultLabelSettings(),
                 boundMaps: []
@@ -818,14 +829,20 @@ module powerbi.visuals {
 
                     if (objects) {
 
-                        data.colorize = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataPoint.colorize, data.colorize);
+                        data.matched.colorize = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataPoint.colorize, data.matched.colorize);
 
-                        data.defaultDataPointColor = DataViewObjects.getFillColor(objects, synopticPanelProps.dataPoint.defaultColor, colors.getColorByIndex(0).value);
- 
-                        data.showAllDataPoints = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataPoint.showAllDataPoints, data.showAllDataPoints);
+                        data.matched.color = DataViewObjects.getFillColor(objects, synopticPanelProps.dataPoint.defaultColor, data.matched.color || colors.getColorByIndex(0).value);
 
-                        if (!data.showAllDataPoints)
-                            defaultDataPointColor = data.defaultDataPointColor;
+                        data.matched.showMultipleColors = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataPoint.showAllDataPoints, data.matched.showMultipleColors);
+
+                        if (!data.matched.showMultipleColors)
+                            defaultDataPointColor = data.matched.color;
+
+                        data.unmatched.show = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataAreas.show, data.unmatched.show);
+
+                        data.unmatched.colorize = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataAreas.colorize, data.unmatched.colorize);
+
+                        data.unmatched.color = DataViewObjects.getFillColor(objects, synopticPanelProps.dataAreas.fill, data.unmatched.color || colors.getColorByIndex(0).value);
 
                         data.dataState1.color = DataViewObjects.getFillColor(objects, synopticPanelProps.dataState1.color, data.dataState1.color);
                         data.dataState1.dataMin = DataViewObjects.getValue<number>(objects, synopticPanelProps.dataState1.dataMin, data.dataState1.dataMin);
@@ -843,10 +860,6 @@ module powerbi.visuals {
                         data.saturationState.dataMax = DataViewObjects.getValue<number>(objects, synopticPanelProps.saturationState.dataMax, data.saturationState.dataMax);
          
                         data.imageData = DataViewObjects.getValue<string>(objects, synopticPanelProps.general.imageData);
-
-                        data.showAllShapes = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataAreas.showAllShapes, data.showAllShapes);
-                        data.showAllAreas = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataAreas.showAllAreas, data.showAllAreas);
-                        data.showAreasLabels = DataViewObjects.getValue<boolean>(objects, synopticPanelProps.dataAreas.showAreasLabels, data.showAreasLabels);
                     }
                 }
 
@@ -1116,6 +1129,11 @@ module powerbi.visuals {
             return returnStr;
         }
 
+        private isLegalId(str) {
+            var legalStr = this.getLegalId(str);
+            return (legalStr === str);
+        }
+
         private clearMap(append?) {
 
             if (this.svg)
@@ -1137,20 +1155,23 @@ module powerbi.visuals {
 
             for (var i = 0; i < this.initialImage.matched.length; i++) {
                 var shape = this.initialImage.matched[i];
-                var el = this.svg.select('#' + shape.id);
-                if (shape && el) {
-                    el.style('fill', shape.style.fill);
-                    el.style('fill-opacity', shape.style.fillopacity);
-                    el.style('stroke', shape.style.stroke);
-                    el.style('stroke-opacity', shape.style.strokeopacity);
-                    el.style('stroke-width', shape.style.strokewidth);
-                    el.style('display', '');
+                if (shape && this.isLegalId(shape.id)) {
+                    var el = this.svg.select('#' + shape.id);
+                    if (!el.empty()) {
+                        el.style('fill', shape.style.fill);
+                        el.style('fill-opacity', shape.style.fillopacity);
+                        el.style('stroke', shape.style.stroke);
+                        el.style('stroke-opacity', shape.style.strokeopacity);
+                        el.style('stroke-width', shape.style.strokewidth);
+                        el.style('display', '');
+                    }
                 }
             } 
 
             for (var i = 0; i < this.initialImage.unmatched.length; i++) {
                 var shape = this.initialImage.unmatched[i];
                 shape.style('display', '');
+                shape.style('fill', shape.style.fill);
             }
 
             this.svg.selectAll('.label').remove();
@@ -1174,19 +1195,21 @@ module powerbi.visuals {
                 for (var a = 0; a < areas.length; a++) {
                     var area = areas[a];
                     var opacity = SynopticPanelBySQLBI.BaseOpacity;
-                    var color = this.data.defaultDataPointColor || this.colors.getColorByIndex(0).value;
+                    var color = this.data.unmatched.color;
+                    var colorize = this.data.unmatched.colorize;
 
-                    var found: boolean = false;
+                    var match: boolean = false;
                     var dataPoint: SynopticPanelDataPoint;
 
                     for (var i = 0; i < this.data.dataPoints.length; i++) {
                         dataPoint = this.data.dataPoints[i];
 
                         if (this.getLegalId(dataPoint.label.toLowerCase()) === this.getLegalId(area.elementId.toLowerCase()) || this.getLegalId(dataPoint.categoryLabel.toLowerCase()) === this.getLegalId(area.elementId.toLowerCase())) {
-                            found = true;
+                            match = true;
                             color = dataPoint.color;
+                            colorize = this.data.matched.colorize;
                             opacity = SynopticPanelBySQLBI.BaseOpacity;
-  
+
                             if (dataPoint.saturationMeasure) {
 
                                 //Saturation
@@ -1211,37 +1234,32 @@ module powerbi.visuals {
                                     color = this.data.dataState2.color;
                                 } else if (dataPoint.stateMeasure <= this.data.dataState3.dataMax && dataPoint.stateMeasure >= this.data.dataState3.dataMin) {
                                     color = this.data.dataState3.color;
-                                } else {
-                                    color = this.data.defaultDataPointColor;
-                                }
+                                } /*else {
+                                    color = this.data.matched.color;
+                                }*/
                             }
 
                             break;
                         }
                     }
 
-                    if ((!this.data.showAllAreas || !this.data.showAllShapes) && !found) {
 
-                        if (area.elementId && !this.data.showAllShapes) {
-                            var g = this.svg.select('#' + area.elementId);
-                            if (!g.empty())
-                                g.style('display', 'none');
-                        }
+                    if (match || this.data.unmatched.show) {
 
-                    } else {
+                        if (!this.isLegalId(area.elementId)) continue;
 
                         var g = this.svg.select('#' + area.elementId);
                         if (g.empty()) continue;
 
-                        var isTextShape = (g[0][0].tagName.toLowerCase() === 'text');
-                        var isG = (g[0][0].tagName.toLowerCase() === 'g');
-                        var drawLabel = !isTextShape;
-
+                        var gEl = g[0][0];
+                        var isTextShape = (gEl.tagName.toLowerCase() === 'text');
+                        var isG = (gEl.tagName.toLowerCase() === 'g');
+     
                         g
-                            .data([(found ? dataPoint : area.name)])
+                            .data([(match ? dataPoint : area.name)])
                             .classed('poly', true);
 
-                        if (this.data.colorize) {
+                        if (colorize) {
                             g
                                 .style('fill', color)
                                 .style('fill-opacity', opacity)
@@ -1253,72 +1271,76 @@ module powerbi.visuals {
                                 g.selectAll('.excluded').each(function (d, i) {
                                     var el = d3.select(this);
                                     el.style('fill', null)
-                                      .style('fill-opacity', null)
-                                      .style('stroke', null)
-                                      .style('stroke-width', null)
-                                      .style('stroke-opacity', null);
+                                        .style('fill-opacity', null)
+                                        .style('stroke', null)
+                                        .style('stroke-width', null)
+                                        .style('stroke-opacity', null);
                                 });
                             }
                         }
 
-                        if (found)
+                        if (match)
                             g.style('opacity', ColumnUtil.getFillOpacity(dataPoint.selected, dataPoint.highlightRatio > 0, false, this.data.hasHighlights))
 
-                        var polyRect: SVGRect = g[0][0].getBBox();
+                        var polyRect: SVGRect = gEl.getBBox();
 
-                        if (found)
-                            TooltipManager.addTooltip(g, (tooltipEvent: TooltipEvent) =>  tooltipEvent.data.tooltipInfo);
+                        if (match)
+                            TooltipManager.addTooltip(g, (tooltipEvent: TooltipEvent) => tooltipEvent.data.tooltipInfo);
                         else
                             TooltipManager.addTooltip(g, (tooltipEvent: TooltipEvent) => [{ displayName: 'Area', value: tooltipEvent.data }]);
 
-                        if (drawLabel && ((!found && this.data.showAllAreas && this.data.showAreasLabels) || (found && (this.data.dataLabelsSettings.show || this.data.dataLabelsSettings.showCategory)))) {
+                        if (!isTextShape && colorize && this.data.dataLabelsSettings.show && (match || this.data.dataLabelsSettings.labelStyle !== labelStyle.data)) {
 
-                            var padding: number = 6;
-      
                             var labelText;
-                            var labelItalic = false;
-                            var wrap = false;
+                            var labelItalic;
+                            var wrap;
+      
+                            if (!match) {
 
-                            if (this.data.showAreasLabels) {
-
-                                labelText = (area.title ? area.title : area.name); //dataLabelUtils.getLabelFormattedText(area.name, polyWidth - (padding * 2));
+                                labelText = (area.title ? area.title : area.name); 
                                 labelItalic = true;
                                 wrap = true;
-                            }
+     
+                            } else {
 
-                            if (found && (this.data.dataLabelsSettings.show || this.data.dataLabelsSettings.showCategory)) {
                                 labelItalic = false;
 
-                                if (this.data.dataLabelsSettings.show) {
+                                if (this.data.dataLabelsSettings.labelStyle === labelStyle.data || this.data.dataLabelsSettings.labelStyle === labelStyle.both) {
+
                                     var alternativeScale: number = (this.data.dataLabelsSettings.displayUnits === 0 ?
                                         <number>d3.max(this.data.dataPoints, d => Math.abs(d.measure)) : null);
 
                                     var measureFormatter = measureFormattersCache.getOrCreate(dataPoint.labelFormatString, this.data.dataLabelsSettings, alternativeScale);
 
-                                    //labelText = dataLabelUtils.getLabelFormattedText(dataPoint.measure, polyRect.width - (padding * 2), dataPoint.labelFormatString, measureFormatter);
+                                    if (this.data.dataLabelsSettings.labelStyle === labelStyle.both) {
 
-                                    //TODO Power BI Bug?
-                                    //if (labelText === '') labelText = String(dataPoint.measure);
+                                        labelText = (area.title ? area.title : dataPoint.label) + ' (' + measureFormatter.format(dataPoint.measure) + ')';
+                                        wrap = true;
 
-                                    labelText = measureFormatter.format(dataPoint.measure);
+                                    } else {
+                                        labelText = measureFormatter.format(dataPoint.measure);
+                                        wrap = false;
+                                    }
 
                                 } else {
-                                    labelText = (area.title ? area.title : dataPoint.label); //dataLabelUtils.getLabelFormattedText(dataPoint.label, polyWidth - (padding * 2));
-                                    wrap = true;
 
+                                    labelText = (area.title ? area.title : dataPoint.label);
+                                    wrap = true;
                                 }
+
                             }
 
-                            var fontSize = parseInt(this.element.css('font-size'), 10);
+                            var fontSize = parseInt(jsCommon.PixelConverter.fromPoint(this.data.dataLabelsSettings.fontSize));
                             var lines = (wrap ?
-                                            this.wrapText(labelText, fontSize, polyRect.width - (padding * 2), polyRect.height) :
-                                            [[labelText, TextMeasurementService.measureSvgTextWidth({ fontFamily: dataLabelUtils.LabelTextProperties.fontFamily, fontSize: fontSize + 'px', text: labelText })]]);
-               
+                                this.wrapText(labelText, fontSize, polyRect.width-10, polyRect.height) :
+                                [[labelText, TextMeasurementService.measureSvgTextWidth({ fontFamily: dataLabelUtils.LabelTextProperties.fontFamily, fontSize: fontSize + 'px', text: labelText })]]);
+
                             var l = this.svg
                                 .append('text')
                                 .attr('fill', this.autoTextColor(color))
                                 .attr('y', polyRect.y + ((polyRect.height - (lines.length * (fontSize + 2)) - 2) / 2) - 2)
-                                .attr('x', polyRect.x + (polyRect.width / 2))
+                                .attr('x', polyRect.x + ((polyRect.width-10) / 2))
+                                .style('font-size', fontSize + 'px')
                                 .classed('label', true);
 
                             if (labelItalic)
@@ -1330,15 +1352,35 @@ module powerbi.visuals {
                                     .attr('dy', fontSize + 2)
                                     .text(lines[i][0]);
                             }
+
+                            //TODO Try the function
+                            //var lNode = <SVGTextElement>l.node();
+                            //TextMeasurementService.wordBreak(lNode, polyRect.width - 12, polyRect.height);
                         }
+
+
+                    } else {
+
+                        //Hide unmatched areas
+                        if (area.elementId && this.isLegalId(area.elementId)) {
+                            var g = this.svg.select('#' + area.elementId);
+                            if (!g.empty())
+                                g.style('display', 'none');
+                        }
+
                     }
                         
                 }
 
-                if (!this.data.showAllShapes) {
+                if (!this.data.unmatched.show) {
                     for (var i = 0; i < this.initialImage.unmatched.length; i++) {
                         var shape = this.initialImage.unmatched[i];
                         shape.style('display', 'none');
+                    }
+                } else if (this.data.unmatched.colorize) {
+                    for (var i = 0; i < this.initialImage.unmatched.length; i++) {
+                        var shape = this.initialImage.unmatched[i];
+                        shape.style('fill', this.data.unmatched.color);
                     }
                 }
 
@@ -1416,7 +1458,7 @@ module powerbi.visuals {
                 var wordWidth = TextMeasurementService.measureSvgTextWidth({ fontFamily: dataLabelUtils.LabelTextProperties.fontFamily, fontSize: fontSize + 'px', text: word });
 
                 var testLine = lastLine[0] + word;
-                var testWidth = parseInt(lastLine[1], 10) + wordWidth;
+                var testWidth = parseInt(lastLine[1]) + wordWidth;
                 if (testWidth > width) {
                     lines.push(lastLine);
                     lastLine = [word, wordWidth];
@@ -1426,13 +1468,13 @@ module powerbi.visuals {
             }
 
             if (lastLine[1] > width) {
-                lastLine[0] = dataLabelUtils.getLabelFormattedText(lastLine[0], width);
+                lastLine[0] = dataLabelUtils.getLabelFormattedText({ label: lastLine[0], maxWidth: width });
                 lastLine[1] = width;
             }
             lines.push(lastLine);
 
             if ((lines.length * (fontSize + 2) - 2) > height)
-                lines = [[dataLabelUtils.getLabelFormattedText(text, width), width]];
+                lines = [[dataLabelUtils.getLabelFormattedText({ label: text, maxWidth: width }), width]];
    
             return lines;
         }
@@ -1449,7 +1491,7 @@ module powerbi.visuals {
 
                     this.legend.drawLegend(legendData, this.currentViewport);
                 } else {
-                    this.legend.changeOrientation(LegendPosition.Top);
+                    this.legend.changeOrientation(LegendPosition.Bottom);
                     this.legend.drawLegend({ dataPoints: [] }, this.currentViewport);
                 }
 
@@ -1483,32 +1525,11 @@ module powerbi.visuals {
                         objectName: 'dataAreas',
                         selector: null,
                         properties: {
-                            showAllShapes: this.data.showAllShapes
+                            show: this.data.unmatched.show,
+                            fill: { solid: { color: this.data.unmatched.color || this.colors.getColorByIndex(0).value } },
+                            colorize: this.data.unmatched.colorize
                         },
                     });
-
-                    enumeration.pushInstance({
-                        objectName: 'dataAreas',
-                        selector: null,
-                        properties: {
-                            showAllAreas: (this.data.showAllShapes ? this.data.showAllAreas : false),
-                            showAreasLabels: ((this.data.showAllAreas && this.data.showAllShapes) ?  this.data.showAreasLabels : false)
-                        },
-                    });
-
-                    /*if (this.parsedAreas) {
-                        for (var a = 0; a < this.parsedAreas.length; a++) {
-                            var area = this.parsedAreas[a];
-                            enumeration.pushInstance({
-                                objectName: 'dataAreas',
-                                displayName: this.getLegalId(area.elementId.toLowerCase()),
-                                selector: null,
-                                properties: {
-                                    type: { text: true }
-                                },
-                            });
-                        }
-                    }*/
 
                     break;
 
@@ -1518,9 +1539,9 @@ module powerbi.visuals {
                         objectName: 'dataPoint',
                         selector: null,
                         properties: {
-                            colorize: this.data.colorize,
-                            defaultColor: { solid: { color: this.data.defaultDataPointColor || this.colors.getColorByIndex(0).value } },
-                            showAllDataPoints: this.data.showAllDataPoints
+                            colorize: this.data.matched.colorize,
+                            defaultColor: { solid: { color: this.data.matched.color || this.colors.getColorByIndex(0).value } },
+                            showAllDataPoints: this.data.matched.showMultipleColors
                         },
                     });
 
@@ -1544,13 +1565,10 @@ module powerbi.visuals {
                         show: true,
                         displayUnits: true,
                         precision: true,
-                        position: false,
+                        fontSize: true,
+                        labelStyle: true,
                     };
                     dataLabelUtils.enumerateDataLabels(labelSettingsOptions);
-                    break;
-
-                case 'categoryLabels':
-                    dataLabelUtils.enumerateCategoryLabels(enumeration, this.data.dataLabelsSettings, false, true);
                     break;
 
                 case 'dataState1':
@@ -1606,6 +1624,8 @@ module powerbi.visuals {
                     var show = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.show, this.legend.isVisible());
                     var showTitle = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.showTitle, true);
                     var titleText = DataViewObjects.getValue(legendObjectProperties, synopticPanelProps.legend.titleText, this.data.legendData.title);
+                    var labelColor = DataViewObject.getValue(legendObjectProperties, synopticPanelProps.legend.labelColor, this.data.legendData.labelColor);
+                    var labelFontSize = DataViewObject.getValue(legendObjectProperties, synopticPanelProps.legend.fontSize, this.data.legendData.fontSize);
 
                     enumeration.pushInstance({
                         selector: null,
@@ -1614,7 +1634,9 @@ module powerbi.visuals {
                             show: show,
                             position: LegendPosition[this.legend.getOrientation()],
                             showTitle: showTitle,
-                            titleText: titleText
+                            titleText: titleText,
+                            labelColor: labelColor,
+                            fontSize: labelFontSize
                         }
                     });
                     break;
@@ -1859,7 +1881,12 @@ module powerbi.visuals {
                     });
                 }
 
-                this.legendData = { title: this.getLegendTitle(), dataPoints: this.legendDataPoints };
+                this.legendData = {
+                    title: this.getLegendTitle(),
+                    dataPoints: this.legendDataPoints,
+                    labelColor: LegendData.DefaultLegendLabelFillColor,
+                    fontSize: SVGLegend.DefaultFontSizeInPt,
+                };
             }
 
             private getLegendTitle(): string {
@@ -2087,6 +2114,7 @@ module powerbi.visuals {
             private convertDataLabelSettings(): VisualDataLabelsSettings {
                 var dataViewMetadata = this.dataViewMetadata;
                 var dataLabelsSettings = dataLabelUtils.getDefaultLabelSettings();
+                dataLabelsSettings.labelStyle = labelStyle.data;
 
                 if (dataViewMetadata) {
                     var objects: DataViewObjects = dataViewMetadata.objects;
@@ -2094,24 +2122,8 @@ module powerbi.visuals {
                         // Handle lables settings
                         var labelsObj = <DataLabelObject>objects['dataLabels'];
                         if (labelsObj) {
-                            if (labelsObj.show !== undefined)
-                                dataLabelsSettings.show = labelsObj.show;
-                            if (labelsObj.labelDisplayUnits !== undefined) {
-                                dataLabelsSettings.displayUnits = labelsObj.labelDisplayUnits;
-                            }
-                            if (labelsObj.labelPrecision !== undefined) {
-                                dataLabelsSettings.precision = (labelsObj.labelPrecision >= 0) ? labelsObj.labelPrecision : 0;
-                            }
+                            dataLabelUtils.updateLabelSettingsFromLabelsObject(labelsObj, dataLabelsSettings);
                         }
-
-                        var categoryLabelsObject = objects['categoryLabels'];
-                        if (categoryLabelsObject) {
-                            // Update category label visibility
-                            var category = <boolean>categoryLabelsObject['show'];
-                            if (category !== undefined)
-                                dataLabelsSettings.showCategory = (dataLabelsSettings.show ? false : category);
-                        }
-
                     }
                 }
 
